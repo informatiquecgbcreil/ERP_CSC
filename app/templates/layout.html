@@ -506,6 +506,7 @@
           {% if can('emargement:view') %}<a class="pill {% if ep.startswith('activite.') or ep.startswith('kiosk.') %}active{% endif %}" href="{{ url_for('activite.index') }}">Présences</a>{% endif %}
           {% if not ui_simplified %}
             {% if can('depenses:view') %}<a class="pill {% if ep.startswith('budget.depenses_list') %}active{% endif %}" href="{{ url_for('budget.depenses_list') }}">Dépenses</a>{% endif %}
+            {% if can('subventions:view') %}<a class="pill {% if ep.startswith('previsionnel.') %}active{% endif %}" href="{{ url_for('previsionnel.index') }}">Prévisionnel</a>{% endif %}
             {% if can('stats:view') %}<a class="pill {% if ep.startswith('main.stats_bilans') or ep.startswith('main.stats') or ep.startswith('main.bilan_global') %}active{% endif %}" href="{{ url_for('main.stats_bilans') }}">Bilans</a>{% endif %}
             {% if can('subventions:view') %}<a class="pill {% if ep.startswith('main.subventions') %}active{% endif %}" href="{{ url_for('main.subventions_list') }}">Subventions</a>{% endif %}
             {% if can('projets:view') %}<a class="pill {% if ep.startswith('projets.') %}active{% endif %}" href="{{ url_for('projets.projets_list') }}">Projets</a>{% endif %}
@@ -517,11 +518,13 @@
               {% if ui_simplified %}
                 <div class="nav-more-section-title">Mode simple · quotidien</div>
                 {% if can('depenses:view') %}<a class="pill {% if ep.startswith('budget.depenses_list') %}active{% endif %}" href="{{ url_for('budget.depenses_list') }}">Dépenses</a>{% endif %}
+                {% if can('subventions:view') %}<a class="pill {% if ep.startswith('previsionnel.') %}active{% endif %}" href="{{ url_for('previsionnel.index') }}">Prévisionnel</a>{% endif %}
                 {% if can('stats:view') %}<a class="pill {% if ep.startswith('main.stats_bilans') or ep.startswith('main.stats') or ep.startswith('main.bilan_global') %}active{% endif %}" href="{{ url_for('main.stats_bilans') }}">Bilans</a>{% endif %}
                 {% if can('subventions:view') %}<a class="pill {% if ep.startswith('main.subventions') %}active{% endif %}" href="{{ url_for('main.subventions_list') }}">Subventions</a>{% endif %}
                 {% if can('projets:view') %}<a class="pill {% if ep.startswith('projets.') %}active{% endif %}" href="{{ url_for('projets.projets_list') }}">Projets</a>{% endif %}
                 {% if can('statsimpact:view') or can('statsimpact:view_all') %}<a class="pill {% if ep.startswith('statsimpact.') %}active{% endif %}" href="{{ url_for('statsimpact.dashboard') }}">Données ateliers</a>{% endif %}
                 {% if can('depenses:create') %}<a class="pill {% if ep.startswith('budget.depense_new') %}active{% endif %}" href="{{ url_for('budget.depense_new') }}">Nouvelle dépense</a>{% endif %}
+                {% if can('subventions:view') %}<a class="pill {% if ep.startswith('previsionnel.') %}active{% endif %}" href="{{ url_for('previsionnel.index') }}">Budget prévisionnel</a>{% endif %}
               {% else %}
                 <div class="nav-more-section-title">Mode expert · quotidien</div>
                 {% if can('partenaires:view') %}<a class="pill {% if ep.startswith('partenaires.') %}active{% endif %}" href="{{ url_for('partenaires.index') }}">Partenaires</a>{% endif %}

@@ -1,0 +1,126 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="card">
+  <div class="page-head">
+    <div>
+      <h1>{{ budget.nom }}</h1>
+      <p class="muted">{{ budget.secteur }} · {{ budget.annee }} · {{ budget.statut }}</p>
+    </div>
+    <div class="inline">
+      <a class="btn" href="{{ url_for('previsionnel.index') }}">Retour</a>
+      <a class="btn ok" href="{{ url_for('previsionnel.export_budget', budget_id=budget.id) }}">Exporter XLSX</a>
+    </div>
+  </div>
+</div>
+
+<div class="grid cards-3">
+  <div class="card"><div class="muted">Charges prévisionnelles</div><h2>{{ '%.2f'|format(budget.total_charges) }} €</h2></div>
+  <div class="card"><div class="muted">Produits prévisionnels</div><h2>{{ '%.2f'|format(budget.total_produits) }} €</h2></div>
+  <div class="card"><div class="muted">Solde produits - charges</div><h2>{{ '%.2f'|format(budget.solde) }} €</h2></div>
+</div>
+
+{% if can_edit_budget %}
+<div class="card">
+  <h2>Paramètres</h2>
+  <form method="post" class="form-grid-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="update_budget">
+    <label class="field-stack">Nom<input class="in" name="nom" value="{{ budget.nom }}"></label>
+    <label class="field-stack">Statut
+      <select class="in" name="statut">
+        {% for st in ['brouillon','valide','archive'] %}<option value="{{ st }}" {% if budget.statut == st %}selected{% endif %}>{{ st }}</option>{% endfor %}
+      </select>
+    </label>
+    <label class="field-stack">Notes<input class="in" name="notes" value="{{ budget.notes or '' }}"></label>
+    <div class="form-actions"><button class="btn ok" type="submit">Enregistrer</button></div>
+  </form>
+</div>
+
+<div class="card">
+  <h2>Ajouter une ligne</h2>
+  <form method="post" class="form-grid-3">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="add_line">
+    <label class="field-stack">Nature
+      <select class="in" name="nature"><option value="charge">Charge</option><option value="produit">Produit</option></select>
+    </label>
+    <label class="field-stack">Compte<input class="in" name="compte" placeholder="60 / 64 / 74"></label>
+    <label class="field-stack">Projet
+      <select class="in" name="projet_id"><option value="">Transversal / non affecté</option>{% for p in projects %}<option value="{{ p.id }}">{{ p.nom }}</option>{% endfor %}</select>
+    </label>
+    <label class="field-stack">Libellé<input class="in" name="libelle" required placeholder="Salaires chargés, fournitures, CAF..."></label>
+    <label class="field-stack">Montant<input class="in" type="number" step="0.01" name="montant" required></label>
+    <label class="field-stack">Commentaire<input class="in" name="commentaire"></label>
+    <div class="form-actions"><button class="btn ok" type="submit">Ajouter la ligne</button></div>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Lignes du budget global</h2>
+  <div class="tablewrap clean">
+    <table class="table">
+      <thead><tr><th>Nature</th><th>Compte</th><th>Libellé</th><th>Projet</th><th>Montant</th><th>Commentaire</th><th></th></tr></thead>
+      <tbody>
+        {% for l in lines %}
+        <tr>
+          <td>{{ 'Produit' if l.nature == 'produit' else 'Charge' }}</td>
+          <td>{{ l.compte }}</td>
+          <td><strong>{{ l.libelle }}</strong></td>
+          <td>{{ l.projet.nom if l.projet else 'Transversal / non affecté' }}</td>
+          <td>{{ '%.2f'|format(l.montant or 0) }} €</td>
+          <td>{{ l.commentaire or '' }}</td>
+          <td>{% if can_edit_budget %}<form method="post" onsubmit="return confirm('Supprimer cette ligne ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="delete_line"><input type="hidden" name="line_id" value="{{ l.id }}"><button class="btn danger" type="submit">Supprimer</button></form>{% endif %}</td>
+        </tr>
+        {% else %}<tr><td colspan="7" class="muted">Aucune ligne pour le moment.</td></tr>{% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Décomposition par projet</h2>
+  <div class="tablewrap clean">
+    <table class="table"><thead><tr><th>Projet</th><th>Charges</th><th>Produits</th><th>Solde</th></tr></thead><tbody>
+      {% for r in project_rows %}<tr><td>{{ r.label }}</td><td>{{ '%.2f'|format(r.charges) }} €</td><td>{{ '%.2f'|format(r.produits) }} €</td><td><strong>{{ '%.2f'|format(r.solde) }} €</strong></td></tr>{% else %}<tr><td colspan="4" class="muted">Pas encore de ventilation.</td></tr>{% endfor %}
+    </tbody></table>
+  </div>
+</div>
+
+{% if can_edit_budget and lines %}
+<div class="card">
+  <h2>Construire un budget d'appel à projet depuis ce prévisionnel</h2>
+  <p class="muted">Coche les lignes à inclure. Tu peux retenir 100 %, un pourcentage, ou saisir un montant retenu manuellement.</p>
+  <form method="post" class="stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="create_appel">
+    <div class="form-grid-3">
+      <label class="field-stack">Nom<input class="in" name="appel_nom" placeholder="Budget CAF - Numérique Par Tous"></label>
+      <label class="field-stack">Projet cible<select class="in" name="appel_projet_id"><option value="">Non précisé</option>{% for p in projects %}<option value="{{ p.id }}">{{ p.nom }}</option>{% endfor %}</select></label>
+      <label class="field-stack">Subvention / financeur<select class="in" name="subvention_id"><option value="">Aucune</option>{% for s in subventions %}<option value="{{ s.id }}">{{ s.nom }}</option>{% endfor %}</select></label>
+      <label class="field-stack">Financeur libre<input class="in" name="financeur" placeholder="CAF, QPV, FONJEP..."></label>
+    </div>
+    <div class="tablewrap clean">
+      <table class="table"><thead><tr><th>Inclure</th><th>Nature</th><th>Compte</th><th>Libellé</th><th>Projet source</th><th>Source</th><th>%</th><th>Montant retenu</th></tr></thead><tbody>
+        {% for l in lines %}
+        <tr>
+          <td><input type="checkbox" name="include_line" value="{{ l.id }}"></td>
+          <td>{{ l.nature }}</td><td>{{ l.compte }}</td><td>{{ l.libelle }}</td><td>{{ l.projet.nom if l.projet else 'Transversal' }}</td><td>{{ '%.2f'|format(l.montant or 0) }} €</td>
+          <td><input class="in" style="max-width:90px" type="number" step="0.01" name="pct_{{ l.id }}" value="100"></td>
+          <td><input class="in" style="max-width:140px" type="number" step="0.01" name="montant_{{ l.id }}" placeholder="auto"></td>
+        </tr>
+        {% endfor %}
+      </tbody></table>
+    </div>
+    <button class="btn ok" type="submit">Créer le budget d'appel à projet</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card">
+  <h2>Budgets d'appel à projet générés</h2>
+  <div class="tablewrap clean"><table class="table"><thead><tr><th>Nom</th><th>Projet</th><th>Financeur</th><th>Charges</th><th>Produits</th><th>Solde</th><th></th></tr></thead><tbody>
+    {% for a in appels %}<tr><td><strong>{{ a.nom }}</strong></td><td>{{ a.projet.nom if a.projet else '' }}</td><td>{{ a.financeur or '' }}</td><td>{{ '%.2f'|format(a.total_charges) }} €</td><td>{{ '%.2f'|format(a.total_produits) }} €</td><td>{{ '%.2f'|format(a.solde) }} €</td><td><a class="btn" href="{{ url_for('previsionnel.appel_detail', appel_id=a.id) }}">Ouvrir</a></td></tr>{% else %}<tr><td colspan="7" class="muted">Aucun budget d'appel généré.</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

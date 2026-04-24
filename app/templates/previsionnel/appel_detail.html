@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block body %}
+<div class="card">
+  <div class="page-head">
+    <div>
+      <h1>{{ appel.nom }}</h1>
+      <p class="muted">Depuis {{ appel.budget.nom }}{% if appel.projet %} · {{ appel.projet.nom }}{% endif %}{% if appel.financeur %} · {{ appel.financeur }}{% endif %}</p>
+    </div>
+    <div class="inline">
+      <a class="btn" href="{{ url_for('previsionnel.detail', budget_id=appel.budget_id) }}">Retour budget</a>
+      <a class="btn ok" href="{{ url_for('previsionnel.export_appel', appel_id=appel.id) }}">Exporter XLSX</a>
+      {% if can_edit_budget %}<form method="post" action="{{ url_for('previsionnel.appel_delete', appel_id=appel.id) }}" onsubmit="return confirm('Supprimer ce budget d’appel à projet ?');"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn danger" type="submit">Supprimer</button></form>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid cards-3">
+  <div class="card"><div class="muted">Charges retenues</div><h2>{{ '%.2f'|format(appel.total_charges) }} €</h2></div>
+  <div class="card"><div class="muted">Produits retenus</div><h2>{{ '%.2f'|format(appel.total_produits) }} €</h2></div>
+  <div class="card"><div class="muted">Solde</div><h2>{{ '%.2f'|format(appel.solde) }} €</h2></div>
+</div>
+
+<div class="card">
+  <h2>Lignes retenues</h2>
+  <div class="tablewrap clean"><table class="table"><thead><tr><th>Nature</th><th>Compte</th><th>Libellé</th><th>Projet source</th><th>Montant source</th><th>Montant retenu</th><th>%</th></tr></thead><tbody>
+    {% for row in appel.lignes %}{% set l = row.ligne_budget %}<tr><td>{{ l.nature }}</td><td>{{ l.compte }}</td><td><strong>{{ l.libelle }}</strong></td><td>{{ l.projet.nom if l.projet else 'Transversal' }}</td><td>{{ '%.2f'|format(l.montant or 0) }} €</td><td>{{ '%.2f'|format(row.montant_retenu or 0) }} €</td><td>{{ row.pourcentage_retenu or '' }}</td></tr>{% endfor %}
+  </tbody></table></div>
+</div>
+{% endblock %}

@@ -500,6 +500,96 @@ class VentilationProjet(db.Model):
     charge = db.relationship("ChargeProjet", back_populates="ventilations")
     produit = db.relationship("ProduitProjet", back_populates="ventilations")
 
+class BudgetPrevisionnel(db.Model):
+    __tablename__ = "budget_previsionnel"
+    id = db.Column(db.Integer, primary_key=True)
+    nom = db.Column(db.String(200), nullable=False)
+    annee = db.Column(db.Integer, nullable=False, index=True)
+    secteur = db.Column(db.String(80), nullable=False, index=True)
+    statut = db.Column(db.String(30), nullable=False, default="brouillon")  # brouillon / valide / archive
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    lignes = db.relationship("BudgetPrevisionnelLigne", back_populates="budget", cascade="all, delete-orphan")
+    appels = db.relationship("AppelProjetBudget", back_populates="budget", cascade="all, delete-orphan")
+
+    @property
+    def total_charges(self):
+        return round(sum(float(l.montant or 0) for l in self.lignes if l.nature == "charge"), 2)
+
+    @property
+    def total_produits(self):
+        return round(sum(float(l.montant or 0) for l in self.lignes if l.nature == "produit"), 2)
+
+    @property
+    def solde(self):
+        return round(float(self.total_produits or 0) - float(self.total_charges or 0), 2)
+
+
+class BudgetPrevisionnelLigne(db.Model):
+    __tablename__ = "budget_previsionnel_ligne"
+    id = db.Column(db.Integer, primary_key=True)
+    budget_id = db.Column(db.Integer, db.ForeignKey("budget_previsionnel.id"), nullable=False, index=True)
+    projet_id = db.Column(db.Integer, db.ForeignKey("projet.id"), nullable=True, index=True)
+
+    nature = db.Column(db.String(10), nullable=False, default="charge")  # charge / produit
+    compte = db.Column(db.String(20), nullable=False, default="60")
+    libelle = db.Column(db.String(255), nullable=False)
+    montant = db.Column(db.Float, default=0.0)
+    commentaire = db.Column(db.Text, nullable=True)
+    ordre = db.Column(db.Integer, nullable=False, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    budget = db.relationship("BudgetPrevisionnel", back_populates="lignes")
+    projet = db.relationship("Projet", backref=db.backref("lignes_previsionnelles", lazy="dynamic"))
+    lignes_appel = db.relationship("AppelProjetBudgetLigne", back_populates="ligne_budget", cascade="all, delete-orphan")
+
+
+class AppelProjetBudget(db.Model):
+    __tablename__ = "appel_projet_budget"
+    id = db.Column(db.Integer, primary_key=True)
+    budget_id = db.Column(db.Integer, db.ForeignKey("budget_previsionnel.id"), nullable=False, index=True)
+    subvention_id = db.Column(db.Integer, db.ForeignKey("subvention.id"), nullable=True, index=True)
+    projet_id = db.Column(db.Integer, db.ForeignKey("projet.id"), nullable=True, index=True)
+
+    nom = db.Column(db.String(200), nullable=False)
+    financeur = db.Column(db.String(200), nullable=True)
+    statut = db.Column(db.String(30), nullable=False, default="preparation")
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    budget = db.relationship("BudgetPrevisionnel", back_populates="appels")
+    subvention = db.relationship("Subvention", backref=db.backref("budgets_appel", lazy="dynamic"))
+    projet = db.relationship("Projet", backref=db.backref("budgets_appel", lazy="dynamic"))
+    lignes = db.relationship("AppelProjetBudgetLigne", back_populates="appel", cascade="all, delete-orphan")
+
+    @property
+    def total_charges(self):
+        return round(sum(float(l.montant_retenu or 0) for l in self.lignes if l.ligne_budget and l.ligne_budget.nature == "charge"), 2)
+
+    @property
+    def total_produits(self):
+        return round(sum(float(l.montant_retenu or 0) for l in self.lignes if l.ligne_budget and l.ligne_budget.nature == "produit"), 2)
+
+    @property
+    def solde(self):
+        return round(float(self.total_produits or 0) - float(self.total_charges or 0), 2)
+
+
+class AppelProjetBudgetLigne(db.Model):
+    __tablename__ = "appel_projet_budget_ligne"
+    id = db.Column(db.Integer, primary_key=True)
+    appel_id = db.Column(db.Integer, db.ForeignKey("appel_projet_budget.id"), nullable=False, index=True)
+    budget_ligne_id = db.Column(db.Integer, db.ForeignKey("budget_previsionnel_ligne.id"), nullable=False, index=True)
+    montant_retenu = db.Column(db.Float, default=0.0)
+    pourcentage_retenu = db.Column(db.Float, nullable=True)
+    commentaire = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    appel = db.relationship("AppelProjetBudget", back_populates="lignes")
+    ligne_budget = db.relationship("BudgetPrevisionnelLigne", back_populates="lignes_appel")
+
 class SubventionProjet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     projet_id = db.Column(db.Integer, db.ForeignKey("projet.id"), nullable=False)

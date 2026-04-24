@@ -71,6 +71,7 @@ def create_app():
     from app.auth.routes import bp as auth_bp
     from app.main.routes import bp as main_bp
     from app.budget.routes import bp as budget_bp
+    from app.previsionnel.routes import bp as previsionnel_bp
     from app.projets.routes import bp as projets_bp
     from app.admin.routes import bp as admin_bp
     from app.activite import bp as activite_bp
@@ -92,6 +93,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(main_bp)
     app.register_blueprint(budget_bp)
+    app.register_blueprint(previsionnel_bp)
     app.register_blueprint(projets_bp)
     app.register_blueprint(admin_bp)
     app.register_blueprint(activite_bp)
