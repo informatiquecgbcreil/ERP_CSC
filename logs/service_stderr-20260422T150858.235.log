@@ -1,0 +1,22 @@
+[2026-04-22 17:08:57,798] WARNING in __init__: SECRET_KEY par défaut détectée. Définis SECRET_KEY via variable d'environnement pour la prod.
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\AppGestion\.venv\Lib\site-packages\waitress\__main__.py", line 3, in <module>
+    run()  # pragma nocover
+    ^^^^^
+  File "C:\AppGestion\.venv\Lib\site-packages\waitress\runner.py", line 283, in run
+    app = resolve(module, obj_name)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\AppGestion\.venv\Lib\site-packages\waitress\runner.py", line 218, in resolve
+    obj = __import__(module_name, fromlist=segments[:1])
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\AppGestion\wsgi.py", line 3, in <module>
+    app = create_app()
+          ^^^^^^^^^^^^
+  File "C:\AppGestion\app\__init__.py", line 79, in create_app
+    from app.bilans.routes import bp as bilans_bp
+  File "C:\AppGestion\app\bilans\routes.py", line 153
+    return render_template(
+    ^^^^^^^^^^^^^^^^^^^^^^^
+SyntaxError: 'return' outside function

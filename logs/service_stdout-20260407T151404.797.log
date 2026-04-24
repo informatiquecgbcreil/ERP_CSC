@@ -1,0 +1,2 @@
+DB URI = sqlite:///C:/AppGestion/instance/database.db
+DB DIALECT = sqlite
