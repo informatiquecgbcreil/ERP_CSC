@@ -11,3 +11,11 @@ static/uploads/
 app/static/uploads/
 
 backups/
+logs/*.log
+*.zip
+* - Copie.*
+*.old
+*.py1
+*.html1
+*.html2
+*.docx1

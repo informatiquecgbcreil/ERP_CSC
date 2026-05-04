@@ -1,3 +1,0 @@
-[2026-04-08 13:09:04,799] WARNING in __init__: SECRET_KEY par défaut détectée. Définis SECRET_KEY via variable d'environnement pour la prod.
-INFO  [alembic.runtime.migration] Context impl PostgresqlImpl.
-INFO  [alembic.runtime.migration] Will assume transactional DDL.
