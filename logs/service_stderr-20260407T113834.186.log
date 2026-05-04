@@ -1,4 +1,0 @@
-[2026-04-07 13:38:33,773] WARNING in __init__: SECRET_KEY par défaut détectée. Définis SECRET_KEY via variable d'environnement pour la prod.
-INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-INFO  [alembic.runtime.migration] Running upgrade 22f3a4b5c6d7 -> 23a4b5c6d7e8, insertion titre sejour dates and scope tweaks
