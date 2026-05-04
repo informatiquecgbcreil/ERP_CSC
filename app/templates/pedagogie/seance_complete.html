@@ -1,0 +1,268 @@
+{% extends "layout.html" %}
+{% block body %}
+<style>
+  .session-shell{display:flex;flex-direction:column;gap:16px}
+  .session-hero{border:1px solid rgba(120,130,160,.22);border-radius:24px;padding:22px;background:linear-gradient(135deg,rgba(59,130,246,.10),rgba(16,185,129,.08))}
+  .session-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap}
+  .session-head h1{margin:0 0 6px}
+  .session-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+  .kpi{border:1px solid rgba(120,130,160,.22);border-radius:18px;padding:13px;background:rgba(255,255,255,.62)}
+  .kpi .label{font-size:.83rem;color:var(--muted,#667085);font-weight:800}
+  .kpi .value{font-size:1.25rem;font-weight:950;margin-top:3px}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .competence-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+  .ref-card{border:1px solid rgba(120,130,160,.20);border-radius:16px;padding:12px;background:rgba(255,255,255,.58)}
+  .ref-card h3{margin:0 0 8px;font-size:1rem}
+  .check-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto;padding-right:4px}
+  .check-line{display:flex;gap:8px;align-items:flex-start;border:1px solid rgba(120,130,160,.12);border-radius:10px;padding:7px;background:rgba(255,255,255,.40)}
+  .obs-table-wrap{overflow:auto;max-width:100%}
+  .obs-table{border-collapse:separate;border-spacing:0;width:100%;min-width:900px}
+  .obs-table th,.obs-table td{border-bottom:1px solid rgba(120,130,160,.18);padding:9px;vertical-align:top}
+  .obs-table th{text-align:left;position:sticky;top:0;background:var(--card-bg,#fff);z-index:1}
+  .obs-table select,.obs-table textarea{width:100%;box-sizing:border-box}
+  .obs-table textarea{min-width:160px}
+  .skill-summary{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .chip{border:1px solid rgba(120,130,160,.22);border-radius:999px;padding:5px 8px;font-size:.82rem;background:rgba(255,255,255,.55)}
+  .muted-small{font-size:.84rem;color:var(--muted,#667085)}
+  .advanced-box{border:1px dashed rgba(120,130,160,.30);border-radius:16px;padding:12px;background:rgba(255,255,255,.42)}
+  @media(max-width:900px){.two-col{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:640px){.kpi-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="session-shell">
+  <section class="session-hero">
+    <div class="session-head">
+      <div>
+        <h1>Séance complète</h1>
+        <p class="muted">{{ session_label(session) }}</p>
+      </div>
+      <div class="session-actions">
+        <a class="btn" href="{{ url_for('pedagogie.apprentissages_home') }}">← Toutes les séances</a>
+        <a class="btn" href="{{ url_for('activite.index') }}">Présences</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Atelier</div><div class="value">{{ session.atelier.nom if session.atelier else "—" }}</div></div>
+      <div class="kpi"><div class="label">Date</div><div class="value">{{ session.date_session or session.rdv_date or "—" }}</div></div>
+      <div class="kpi"><div class="label">Participants présents</div><div class="value">{{ presences|length }}</div></div>
+      <div class="kpi"><div class="label">Savoir-faire observés</div><div class="value">{{ competences|length }}</div></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Comment lire cette page ?</h2>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">Intention de séance</div><div class="value" style="font-size:1rem;">Pourquoi on fait cette séance</div></div>
+      <div class="kpi"><div class="label">Savoir-faire observés</div><div class="value" style="font-size:1rem;">Ce qu’on regarde chez chaque participant</div></div>
+      <div class="kpi"><div class="label">Objectifs alimentés</div><div class="value" style="font-size:1rem;">À quoi ça contribue dans le projet</div></div>
+      <div class="kpi"><div class="label">Observations</div><div class="value" style="font-size:1rem;">Ce qui alimente le passeport</div></div>
+    </div>
+  </section>
+
+  <section class="two-col">
+    <div class="card">
+      <h2>1. Intention de séance</h2>
+      <p class="muted">
+        Ici, tu écris pourquoi cette séance existe aujourd’hui. Ce n’est pas la grille d’évaluation individuelle : c’est le sens général de la séance.
+      </p>
+
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="save_session_objectif">
+        <label class="field-stack">Intention / objectif de séance
+          <input name="titre" value="{{ session.intention_seance or '' }}" placeholder="Ex. Envoyer un mail simple avec une pièce jointe">
+        </label>
+        <label class="field-stack">Précision facultative
+          <textarea name="description" rows="3" placeholder="Contexte, niveau attendu, adaptation du jour...">{{ session.intention_seance_detail or '' }}</textarea>
+        </label>
+        <button class="btn ok" type="submit">Enregistrer l’intention de séance</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2>2. Objectifs de projet alimentés</h2>
+      <p class="muted">
+        Optionnel : ici, tu peux dire à quels objectifs plus larges contribuent les savoir-faire observés. Ce bloc sert surtout aux bilans et au pilotage, pas à l’évaluation individuelle du jour.
+      </p>
+      {% if objectifs_nourris %}
+        <ul>
+          {% for obj in objectifs_nourris %}
+            <li><strong>{{ obj.titre }}</strong> <span class="muted">({{ obj.type }})</span></li>
+          {% endfor %}
+        </ul>
+      {% else %}
+        <p class="muted">Aucun objectif de projet relié aux savoir-faire de cette séance pour le moment. Tu peux ignorer ce bloc si tu veux seulement observer la séance.</p>
+      {% endif %}
+
+      <details class="advanced-box">
+        <summary>Relier ces savoir-faire à des objectifs de projet / objectifs opérationnels</summary>
+        <form method="post" style="margin-top:10px;">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input type="hidden" name="action" value="link_objectifs">
+          <div class="check-list">
+            {% for obj in available_objectifs %}
+              <label class="check-line">
+                <input type="checkbox" name="objectif_ids" value="{{ obj.id }}">
+                <span>{{ obj.titre }} <span class="muted-small">#{{ obj.id }}</span></span>
+              </label>
+            {% endfor %}
+          </div>
+          <button class="btn ok" type="submit" style="margin-top:10px;">Relier aux objectifs sélectionnés</button>
+        </form>
+      </details>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>3. Savoir-faire à observer chez les participants</h2>
+    <p class="muted">
+      C’est le cœur de l’évaluation individuelle : tu coches les items du référentiel qui créeront la grille d’observation des participants présents.
+    </p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="save_competences">
+      <div class="competence-picker">
+        {% for ref in referentiels %}
+          <div class="ref-card">
+            <h3>{{ ref.nom }}</h3>
+            <div class="check-list">
+              {% for comp in ref.competences %}
+                <label class="check-line">
+                  <input type="checkbox" name="competence_ids" value="{{ comp.id }}" {% if comp in competences %}checked{% endif %}>
+                  <span><strong>{{ comp.code }}</strong> — {{ comp.nom }}</span>
+                </label>
+              {% else %}
+                <p class="muted-small">Aucun savoir-faire dans ce catalogue.</p>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <button class="btn ok" type="submit" style="margin-top:12px;">Mettre à jour les savoir-faire observés</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>4. Bilan qualitatif de séance</h2>
+    <p class="muted">
+      Ici, tu notes ton regard d’animateur sur la séance : pertinence, difficulté, participation et points à reprendre.
+      Ce bloc ne remplace pas les observations individuelles.
+    </p>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input type="hidden" name="action" value="save_bilan_qualitatif">
+
+      <div class="two-col">
+        <label class="field-stack">Pertinence de la séance
+          <select name="pertinence">
+            <option value="" {% if not session.pertinence %}selected{% endif %}>Non renseigné</option>
+            <option value="oui" {% if session.pertinence == "oui" %}selected{% endif %}>Pertinente</option>
+            <option value="partiel" {% if session.pertinence == "partiel" %}selected{% endif %}>Partiellement pertinente</option>
+            <option value="non" {% if session.pertinence == "non" %}selected{% endif %}>Peu pertinente</option>
+          </select>
+        </label>
+
+        <label class="field-stack">Niveau de difficulté
+          <select name="difficulte">
+            <option value="" {% if not session.difficulte %}selected{% endif %}>Non renseigné</option>
+            <option value="trop_facile" {% if session.difficulte == "trop_facile" %}selected{% endif %}>Trop facile</option>
+            <option value="adaptee" {% if session.difficulte == "adaptee" %}selected{% endif %}>Adaptée</option>
+            <option value="trop_difficile" {% if session.difficulte == "trop_difficile" %}selected{% endif %}>Trop difficile</option>
+          </select>
+        </label>
+
+        <label class="field-stack">Participation du groupe
+          <select name="participation_groupe">
+            <option value="" {% if not session.participation_groupe %}selected{% endif %}>Non renseignée</option>
+            <option value="faible" {% if session.participation_groupe == "faible" %}selected{% endif %}>Faible</option>
+            <option value="correcte" {% if session.participation_groupe == "correcte" %}selected{% endif %}>Correcte</option>
+            <option value="bonne" {% if session.participation_groupe == "bonne" %}selected{% endif %}>Bonne</option>
+            <option value="tres_bonne" {% if session.participation_groupe == "tres_bonne" %}selected{% endif %}>Très bonne</option>
+          </select>
+        </label>
+
+        <label class="check-line">
+          <input type="checkbox" name="a_reprendre" value="1" {% if session.a_reprendre %}checked{% endif %}>
+          <span>À reprendre / prolonger sur une prochaine séance</span>
+        </label>
+      </div>
+
+      <label class="field-stack">Bilan qualitatif
+        <textarea name="bilan_qualitatif" rows="4" placeholder="Ex. La séance était pertinente mais trop dense. La pièce jointe reste difficile pour le groupe...">{{ session.bilan_qualitatif or '' }}</textarea>
+      </label>
+
+      <label class="field-stack">Commentaire pédagogique complémentaire
+        <textarea name="commentaire_pedagogique" rows="3" placeholder="Adaptations, points de vigilance, idées pour la suite...">{{ session.commentaire_pedagogique or '' }}</textarea>
+      </label>
+
+      <button class="btn ok" type="submit">Enregistrer le bilan de séance</button>
+    </form>
+  </section>
+
+  <section class="card">
+    <h2>5. Observations individuelles</h2>
+    <p class="muted">
+      Pour chaque participant présent, indique le niveau observé sur chaque savoir-faire. L’enregistrement alimente la table <code>Evaluation</code>.
+    </p>
+
+    {% if not competences %}
+      <p class="muted">Ajoute d’abord des savoir-faire observés à la séance.</p>
+    {% elif not presences %}
+      <p class="muted">Aucun participant présent/émargé sur cette séance.</p>
+    {% else %}
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="action" value="save_observations">
+        <div class="obs-table-wrap">
+          <table class="obs-table">
+            <thead>
+              <tr>
+                <th>Participant</th>
+                {% for comp in competences %}
+                  <th>
+                    {{ comp.nom }}
+                    <div class="muted-small">{{ comp.code }}</div>
+                    {% set counts = counts_by_competence.get(comp.id, {}) %}
+                    <div class="skill-summary">
+                      <span class="chip">Diff. {{ counts.get(0, 0) }}</span>
+                      <span class="chip">Prog. {{ counts.get(1, 0) }}</span>
+                      <span class="chip">Réussi {{ counts.get(2, 0) }}</span>
+                      <span class="chip">Aise {{ counts.get(3, 0) }}</span>
+                    </div>
+                  </th>
+                {% endfor %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for presence in presences %}
+                {% set participant = presence.participant %}
+                <tr>
+                  <td><strong>{{ participant.nom }} {{ participant.prenom }}</strong></td>
+                  {% for comp in competences %}
+                    {% set ev = evaluations.get((participant.id, comp.id)) %}
+                    <td>
+                      <select name="etat_{{ participant.id }}_{{ comp.id }}">
+                        <option value="" {% if not ev %}selected{% endif %}>Non observé</option>
+                        <option value="0" {% if ev and ev.etat == 0 %}selected{% endif %}>En difficulté</option>
+                        <option value="1" {% if ev and ev.etat == 1 %}selected{% endif %}>En progression</option>
+                        <option value="2" {% if ev and ev.etat == 2 %}selected{% endif %}>Réussi</option>
+                        <option value="3" {% if ev and ev.etat == 3 %}selected{% endif %}>Très à l’aise</option>
+                      </select>
+                      <textarea name="commentaire_{{ participant.id }}_{{ comp.id }}" rows="2" placeholder="Commentaire facultatif">{{ ev.commentaire if ev else "" }}</textarea>
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <button class="btn ok" type="submit" style="margin-top:12px;">Enregistrer les observations</button>
+      </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

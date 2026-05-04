@@ -13,7 +13,7 @@
       <p class="muted" style="margin:6px 0 0 0;">Consulte la fiche d'accompagnement, les parcours suivis, les positionnements et les certifications.</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
-      <a class="pill" href="{{ url_for('participants.view_participant', participant_id=participant.id) if false else '#' }}" style="display:none"></a>
+      <a class="pill" href="{{ url_for('participants.edit_participant', participant_id=participant.id) if false else '#' }}" style="display:none"></a>
       {% if can_edit %}
       <a class="pill active" href="{{ url_for('insertion.participant_edit', participant_id=participant.id) }}">Mettre à jour la fiche</a>
       {% endif %}

@@ -47,38 +47,60 @@ def _year_bounds(year: int) -> Tuple[datetime.date, datetime.date]:
 
 def list_exercice_years(scope) -> list[int]:
     """
-    Retourne les années disponibles pour les bilans, basées sur SessionActivite.date_session.
-    Compatible SQLite/PostgreSQL.
+    Retourne les années disponibles pour les bilans.
 
-    Scope:
-      - scope.secteurs is None  => global (tous secteurs)
-      - scope.secteurs = [...]  => filtré sur ces secteurs
+    Correctif P0.3C.2 :
+    auparavant la liste dépendait surtout des sessions d'activité.
+    Résultat : une année avec des subventions/budgets mais peu ou pas de sessions
+    pouvait disparaître du filtre, puis provoquer un abort lors de la sélection.
+
+    On agrège désormais :
+    - années de sessions ;
+    - années d'exercice des subventions/enveloppes.
     """
+    years = set()
 
-    q = (
+    # Années issues des sessions
+    q_sessions = (
         db.session.query(extract("year", SessionActivite.date_session).label("y"))
         .filter(SessionActivite.is_deleted == False)
         .filter(SessionActivite.date_session.isnot(None))
     )
 
-    # Filtre scope (responsable secteur / périmètre)
     if getattr(scope, "secteurs", None) is not None:
         secteurs = scope.secteurs or []
         if secteurs:
-            q = q.filter(SessionActivite.secteur.in_(secteurs))
+            q_sessions = q_sessions.filter(SessionActivite.secteur.in_(secteurs))
         else:
-            # Scope vide => aucune donnée visible
             cur = date.today().year
             return [cur]
 
-    years = [int(r.y) for r in q.distinct().order_by(db.desc("y")).all() if r.y is not None]
+    for row in q_sessions.distinct().all():
+        if row.y is not None:
+            try:
+                years.add(int(row.y))
+            except Exception:
+                pass
 
-    # UX: inclure l'année courante même si vide
+    # Années issues des subventions / enveloppes financières
+    q_subs = (
+        db.session.query(Subvention.annee_exercice)
+        .filter(Subvention.est_archive.is_(False))
+        .filter(Subvention.annee_exercice.isnot(None))
+    )
+    q_subs = _apply_secteur_filter(q_subs, scope, Subvention.secteur)
+
+    for (y,) in q_subs.distinct().all():
+        if y is not None:
+            try:
+                years.add(int(y))
+            except Exception:
+                pass
+
     cur = date.today().year
-    if cur not in years:
-        years.insert(0, cur)
+    years.add(cur)
 
-    return years or [cur]
+    return sorted(years, reverse=True)
 
 
 def compute_kpis(year: int, scope: BilansScope) -> Dict[str, float]:
@@ -152,7 +174,13 @@ def compute_depenses_mensuelles(year: int, scope: BilansScope) -> List[Dict[str,
         Depense.date_paiement,
         func.date(Depense.created_at),
     )
-    month_expr = func.strftime("%m", date_expr)
+
+    # P0.3C.3 :
+    # func.strftime("%m", ...) est spécifique SQLite et plante en PostgreSQL.
+    # SQLAlchemy extract("month", ...) compile correctement selon le dialecte :
+    # - PostgreSQL : EXTRACT(month FROM ...)
+    # - SQLite : STRFTIME sous le capot.
+    month_expr = extract("month", date_expr)
 
     q = (
         db.session.query(month_expr.label("mois"), func.coalesce(func.sum(Depense.montant), 0.0).label("total"))
@@ -171,7 +199,15 @@ def compute_depenses_mensuelles(year: int, scope: BilansScope) -> List[Dict[str,
     q = _apply_secteur_filter(q, scope, Subvention.secteur)
     q = q.group_by(month_expr).order_by(month_expr)
 
-    by_month = {int(m): float(t or 0.0) for m, t in q.all() if m is not None}
+    by_month = {}
+    for m, t in q.all():
+        if m is None:
+            continue
+        try:
+            month_num = int(float(m))
+        except Exception:
+            continue
+        by_month[month_num] = float(t or 0.0)
     out = []
     for m in range(1, 13):
         out.append({"mois": m, "total": round(by_month.get(m, 0.0), 2)})

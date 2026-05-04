@@ -12,6 +12,7 @@
     <div>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <a class="btn btn-sm btn-outline-secondary" href="{{ url_for('projets.projets_edit', projet_id=projet.id) }}">← Retour au projet</a>
+        <a class="btn btn-sm btn-outline-success" href="{{ url_for('projets.projet_finance', projet_id=projet.id) }}">Dossier financier</a>
         <div class="btn-group" role="group" aria-label="Budget du projet">
           <a class="btn btn-sm {{ 'btn-primary' if request.path.endswith('/budget/charges') else 'btn-outline-primary' }}" href="{{ url_for('projets.projet_budget_charges', projet_id=projet.id) }}">Charges</a>
           <a class="btn btn-sm {{ 'btn-primary' if request.path.endswith('/budget/produits') else 'btn-outline-primary' }}" href="{{ url_for('projets.projet_budget_produits', projet_id=projet.id) }}">Produits</a>

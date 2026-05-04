@@ -5,6 +5,9 @@
     <div class="page-head">
       <h1 style="margin:0;">Compétences et suivi · objectifs</h1>
       <p class="muted" style="margin:6px 0 0 0;">Crée rapidement une chaîne d'objectifs ou ouvre les options avancées pour les cas particuliers.</p>
+      <p class="muted" style="margin:6px 0 0 0;">
+        Un objectif déjà utilisé dans une séance n’est plus supprimable : il reste conservé pour préserver l’historique pédagogique.
+      </p>
       <div class="inline" style="gap:8px; margin-top:12px; flex-wrap:wrap;">
         <a class="pill" href="{{ url_for('pedagogie.modules_pedagogiques') }}">Catalogue de modules</a>
         <a class="pill" href="{{ url_for('pedagogie.plan_projet') }}">Plan de projet</a>
@@ -163,12 +166,21 @@
                 </td>
                 <td>{{ obj.parent.titre if obj.parent else '—' }}</td>
                 <td>
-                  <form method="post">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" name="action" value="delete_objectif">
-                    <input type="hidden" name="objectif_id" value="{{ obj.id }}">
-                    <button class="btn danger" type="submit">Supprimer</button>
-                  </form>
+                  {% set usage = objectif_usage.get(obj.id) if objectif_usage else none %}
+                  {% if usage and usage.used %}
+                    <button class="btn" type="button" disabled>Utilisé</button>
+                    <div class="muted" style="font-size:.82rem; margin-top:4px;">
+                      {% if usage.suivis %}{{ usage.suivis }} suivi(s){% endif %}
+                      {% if usage.enfants %}{% if usage.suivis %} · {% endif %}{{ usage.enfants }} enfant(s){% endif %}
+                    </div>
+                  {% else %}
+                    <form method="post" onsubmit="return confirm('Supprimer cet objectif ? Cette action est possible uniquement s’il n’a pas encore été utilisé.');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="action" value="delete_objectif">
+                      <input type="hidden" name="objectif_id" value="{{ obj.id }}">
+                      <button class="btn danger" type="submit">Supprimer</button>
+                    </form>
+                  {% endif %}
                 </td>
               </tr>
             {% else %}

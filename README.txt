@@ -1,16 +1,12 @@
-Hotfix Magatomatique Excel - version financeur plus
+Hotfix export XLSX prévisionnel
 
 Remplacer :
-- app/statsimpact/routes.py
+- app/previsionnel/routes.py
 
-Ajoute sans retirer de données :
-- feuille 'Lecture financeur' en première position ;
-- synthèse globale lisible ;
-- points d'attention automatiques ;
-- top 10 ateliers par présence ;
-- vrais tableaux Excel filtrables/triables ;
-- gel intelligent des volets ;
-- couleurs douces sur KPI ;
-- sécurisation des noms de tables Excel pour éviter les fichiers endommagés.
+Corrige le fichier Excel déclaré endommagé :
+- les tableaux Excel démarraient sur la ligne vide juste avant les en-têtes ;
+- Excel créait donc des colonnes de tableau nommées None ;
+- la ligne d'en-tête est maintenant correctement repérée ;
+- _add_table sécurise aussi les en-têtes vides ou dupliqués.
 
-Après remplacement, relancer Flask puis retélécharger l'export annuel par atelier.
+Relancer Flask puis retélécharger l'export budget prévisionnel.

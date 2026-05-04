@@ -134,8 +134,9 @@ def dashboard():
     except (TypeError, ValueError):
         year = years[0]
     if year not in years:
-        # évite de forcer un year arbitraire via l'URL
-        abort(403)
+        # P0.3C.3 : ne pas casser le dashboard si une année existe côté finance
+        # mais pas encore côté activité, ou si l'URL contient un exercice valide métier.
+        years = sorted(set(list(years) + [year]), reverse=True)
 
     kpis = compute_kpis(year, scope)
     series = compute_depenses_mensuelles(year, scope)
@@ -187,7 +188,7 @@ def dashboard_export_xlsx():
     except (TypeError, ValueError):
         year = years[0]
     if year not in years:
-        abort(403)
+        years = sorted(set(list(years) + [year]), reverse=True)
 
     wb = _build_bilans_dashboard_workbook(year, scope)
     bio = BytesIO()
@@ -460,7 +461,7 @@ def bilan_secteur():
     except (TypeError, ValueError):
         year = years[0]
     if year not in years:
-        abort(403)
+        years = sorted(set(list(years) + [year]), reverse=True)
 
     secteurs = list_secteurs(year, scope)
 
@@ -470,7 +471,7 @@ def bilan_secteur():
         # responsable_secteur
         selected = scope.secteurs[0] if scope.secteurs else None
     if selected and selected not in secteurs:
-        abort(403)
+        selected = secteurs[0] if secteurs else None
     if not selected and secteurs:
         selected = secteurs[0]
 
@@ -499,7 +500,7 @@ def bilan_subvention():
     except (TypeError, ValueError):
         year = years[0]
     if year not in years:
-        abort(403)
+        years = sorted(set(list(years) + [year]), reverse=True)
 
     subventions = list_subventions(year, scope)
 
@@ -514,7 +515,7 @@ def bilan_subvention():
         if sid:
             selected = next((s for s in subventions if s["id"] == sid), None)
             if not selected:
-                abort(403)
+                selected = None
     if not selected and subventions:
         selected = subventions[0]
 
@@ -543,7 +544,7 @@ def qualite():
     except (TypeError, ValueError):
         year = years[0]
     if year not in years:
-        abort(403)
+        years = sorted(set(list(years) + [year]), reverse=True)
 
     data = compute_qualite_gestion(year, scope)
     return render_template("bilans_qualite.html", year=year, years=years, data=data, scope=scope)
@@ -561,7 +562,7 @@ def inventaire():
     except (TypeError, ValueError):
         year = years[0]
     if year not in years:
-        abort(403)
+        years = sorted(set(list(years) + [year]), reverse=True)
 
     data = compute_stats_inventaire(year, scope)
     return render_template("bilans_inventaire.html", year=year, years=years, data=data, scope=scope)

@@ -1,3 +1,5 @@
+from pathlib import Path
+import re
 import csv
 from io import StringIO, BytesIO
 from datetime import date
@@ -82,6 +84,7 @@ from app.models import (
     MaterielConsommationConfig,
     MaterielConsommationLigne,
 )
+from app.previsionnel.referentiel import BudgetCategorieReferentiel, BudgetCompteReferentiel
 from app.services.dashboard_service import build_dashboard_context
 from app.services.dashboard_customization import (
     available_quick_actions,
@@ -554,6 +557,56 @@ def can_see_secteur(secteur: str) -> bool:
     return can_access_secteur(secteur)
 
 
+def _parse_money(value, default=0.0) -> float:
+    raw = str(value or "").replace(" ", "").replace(",", ".")
+    try:
+        return float(raw) if raw else float(default)
+    except Exception:
+        return float(default)
+
+
+def _ref_scope_query(query, model, secteur: str | None):
+    if secteur:
+        return query.filter((model.secteur.is_(None)) | (model.secteur == secteur))
+    return query
+
+
+def _budget_categories_ref_for_secteur(secteur: str | None = None, nature: str | None = None, active_only: bool = True):
+    q = BudgetCategorieReferentiel.query.join(BudgetCompteReferentiel)
+    q = _ref_scope_query(q, BudgetCategorieReferentiel, secteur)
+    if secteur:
+        q = q.filter((BudgetCompteReferentiel.secteur.is_(None)) | (BudgetCompteReferentiel.secteur == secteur))
+    if nature in ("charge", "produit"):
+        q = q.filter(BudgetCategorieReferentiel.nature == nature)
+    if active_only:
+        q = q.filter(BudgetCategorieReferentiel.actif.is_(True), BudgetCompteReferentiel.actif.is_(True))
+    return q.order_by(
+        BudgetCompteReferentiel.nature.asc(),
+        BudgetCompteReferentiel.ordre.asc(),
+        BudgetCompteReferentiel.code.asc(),
+        BudgetCategorieReferentiel.ordre.asc(),
+        BudgetCategorieReferentiel.libelle.asc(),
+    ).all()
+
+
+def _budget_category_allowed(cat: BudgetCategorieReferentiel, secteur: str | None, nature: str | None = None) -> bool:
+    if not cat or not getattr(cat, "compte", None):
+        return False
+    if nature in ("charge", "produit") and cat.nature != nature:
+        return False
+    if cat.secteur and secteur and cat.secteur != secteur:
+        return False
+    if cat.compte.secteur and secteur and cat.compte.secteur != secteur:
+        return False
+    return bool(cat.actif and cat.compte.actif)
+
+
+def _budget_category_compte_label(cat: BudgetCategorieReferentiel) -> str:
+    if not cat or not getattr(cat, "compte", None):
+        return ""
+    return f"{cat.compte.code} - {cat.compte.libelle}".strip(" -")
+
+
 def _compute_prorata(lignes, montant_cible: float):
     """
     Calcule une répartition pro-rata sur montant_base.
@@ -754,6 +807,380 @@ def _build_bilan_global_workbook(payload: dict):
 
 
 # --------- Setup start ---------
+
+
+# ---------------------------------------------------------------------
+# P0.3C — Hubs métier
+# ---------------------------------------------------------------------
+
+def _hub_forbidden_if_empty(cards):
+    if not cards:
+        abort(403)
+
+
+@bp.route("/publics")
+@login_required
+def hub_publics():
+    cards = []
+
+    if can("participants:view") or can("participants:view_all"):
+        cards.append({
+            "title": "Participants",
+            "subtitle": "Retrouver, créer ou mettre à jour une fiche habitant.",
+            "primary_label": "Ouvrir les participants",
+            "primary_url": url_for("participants.list_participants"),
+            "secondary": [
+                {"label": "Ajouter une personne", "url": url_for("participants.new_participant")} if can("participants:edit") else None,
+                {"label": "Doublons potentiels", "url": url_for("participants.duplicates")} if can("participants:edit") else None,
+            ],
+            "tag": "Publics",
+        })
+
+    if can("insertion:view"):
+        cards.append({
+            "title": "Insertion",
+            "subtitle": "Suivre les parcours, positionnements et données insertion.",
+            "primary_label": "Ouvrir insertion",
+            "primary_url": url_for("insertion.index"),
+            "secondary": [],
+            "tag": "Parcours",
+        })
+
+    if can("quartiers:view"):
+        cards.append({
+            "title": "Quartiers",
+            "subtitle": "Consulter les quartiers, QPV et informations territoriales.",
+            "primary_label": "Ouvrir quartiers",
+            "primary_url": url_for("quartiers.index"),
+            "secondary": [],
+            "tag": "Territoire",
+        })
+
+    _hub_forbidden_if_empty(cards)
+    return render_template(
+        "hub_publics.html",
+        title="Publics & parcours",
+        intro="Une porte d’entrée pour tout ce qui concerne les habitants, leurs parcours et leur territoire.",
+        cards=cards,
+    )
+
+
+@bp.route("/activites")
+@login_required
+def hub_activites():
+    cards = []
+
+    if can("emargement:view"):
+        cards.append({
+            "title": "Présences / émargement",
+            "subtitle": "Faire l’émargement, ouvrir les ateliers et gérer les sessions.",
+            "primary_label": "Ouvrir les présences",
+            "primary_url": url_for("activite.index"),
+            "secondary": [
+                {"label": "Modèles d’émargement", "url": url_for("activite.emargement_models")} if can("emargement:edit") else None,
+            ],
+            "tag": "Quotidien",
+        })
+
+    if can("statsimpact:view") or can("stats:view"):
+        cards.append({
+            "title": "Données ateliers",
+            "subtitle": "Suivre les statistiques d’activité, présences et ateliers.",
+            "primary_label": "Voir les données",
+            "primary_url": url_for("statsimpact.dashboard"),
+            "secondary": [],
+            "tag": "Analyse",
+        })
+
+    if can("pedagogie:view"):
+        cards.append({
+            "title": "Pédagogie",
+            "subtitle": "Référentiels, compétences, modules et suivi pédagogique.",
+            "primary_label": "Ouvrir pédagogie",
+            "primary_url": url_for("pedagogie.referentiels_list"),
+            "secondary": [
+                {"label": "Suivi pédagogique", "url": url_for("pedagogie.suivi_pedagogique")},
+            ],
+            "tag": "Compétences",
+        })
+
+    _hub_forbidden_if_empty(cards)
+    return render_template(
+        "hub_activites.html",
+        title="Activités & présences",
+        intro="Un hub pour passer des séances aux présences, puis aux données d’activité et au suivi pédagogique.",
+        cards=cards,
+    )
+
+
+@bp.route("/bilans-hub")
+@login_required
+def hub_bilans():
+    cards = []
+
+    if can("stats:view"):
+        cards.append({
+            "title": "Stats & bilans",
+            "subtitle": "Consulter les chiffres clés et les indicateurs de pilotage.",
+            "primary_label": "Ouvrir stats & bilans",
+            "primary_url": url_for("main.stats_bilans"),
+            "secondary": [
+                {"label": "Bilan global", "url": url_for("main.bilan_global")},
+                {"label": "Export bilan XLSX", "url": url_for("main.bilan_global_export_xlsx")},
+            ],
+            "tag": "Pilotage",
+        })
+
+    if can("bilans:view"):
+        cards.append({
+            "title": "Bilans lourds",
+            "subtitle": "Préparer les bilans annuels, narratifs et exports complets.",
+            "primary_label": "Ouvrir bilans lourds",
+            "primary_url": url_for("bilans.bilans_lourds", year=date.today().year),
+            "secondary": [
+                {"label": "Bilan secteur", "url": url_for("bilans.bilan_secteur")},
+                {"label": "Bilan subvention", "url": url_for("bilans.bilan_subvention")},
+                {"label": "Qualité des données", "url": url_for("bilans.qualite")},
+            ],
+            "tag": "Annuel",
+        })
+
+    if can("questionnaires:view"):
+        cards.append({
+            "title": "Questionnaires d’impact",
+            "subtitle": "Consulter les questionnaires et retours qualitatifs.",
+            "primary_label": "Ouvrir questionnaires",
+            "primary_url": url_for("questionnaires.index"),
+            "secondary": [],
+            "tag": "Impact",
+        })
+
+    _hub_forbidden_if_empty(cards)
+    return render_template(
+        "hub_bilans.html",
+        title="Bilans & exports",
+        intro="La zone pour préparer les bilans, vérifier les données et sortir les exports utiles.",
+        cards=cards,
+    )
+
+
+@bp.route("/ressources")
+@login_required
+def hub_ressources():
+    cards = []
+
+    if can("inventaire:view"):
+        cards.append({
+            "title": "Inventaire matériel",
+            "subtitle": "Suivre le matériel, les achats et les équipements liés aux dépenses.",
+            "primary_label": "Ouvrir inventaire",
+            "primary_url": url_for("inventaire_materiel.list_items"),
+            "secondary": [
+                {"label": "Ajouter du matériel", "url": url_for("inventaire_materiel.new_item")} if can("inventaire:edit") else None,
+            ],
+            "tag": "Matériel",
+        })
+
+    if can("partenaires:view"):
+        cards.append({
+            "title": "Annuaire partenaires",
+            "subtitle": "Retrouver les structures, contacts et interventions partenaires.",
+            "primary_label": "Ouvrir partenaires",
+            "primary_url": url_for("partenaires.index"),
+            "secondary": [
+                {"label": "Ajouter un partenaire", "url": url_for("partenaires.create")} if can("partenaires:edit") else None,
+            ],
+            "tag": "Réseau",
+        })
+
+    _hub_forbidden_if_empty(cards)
+    return render_template(
+        "hub_ressources.html",
+        title="Ressources",
+        intro="Les ressources utiles autour des projets : matériel, partenaires et outils de soutien.",
+        cards=cards,
+    )
+
+
+
+
+# ---------------------------------------------------------------------
+# P0.3F — Audit navigation / templates
+# ---------------------------------------------------------------------
+
+def _p03f_collect_endpoints():
+    try:
+        return set(current_app.view_functions.keys())
+    except Exception:
+        return set()
+
+
+def _p03f_scan_templates():
+    templates_dir = Path(current_app.root_path) / "templates"
+    endpoints = _p03f_collect_endpoints()
+    rows = []
+
+    if not templates_dir.exists():
+        return [{
+            "level": "danger",
+            "file": "app/templates",
+            "type": "templates",
+            "message": "Dossier templates introuvable.",
+            "detail": str(templates_dir),
+        }]
+
+    # Ne pas confondre safe_url_for(...) avec url_for(...).
+    url_for_re = re.compile(r"(?<!safe_)url_for\(\s*['\"]([^'\"]+)['\"]")
+    endpoint_re = re.compile(r"request\.endpoint\s*==\s*['\"]([^'\"]+)['\"]")
+    has_perm_re = re.compile(r"\bhas_perm\s*\(")
+
+    for path in sorted(templates_dir.rglob("*.html")):
+        rel = path.relative_to(current_app.root_path).as_posix()
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = path.read_text(encoding="latin-1", errors="ignore")
+
+        for endpoint in url_for_re.findall(text):
+            if endpoint not in endpoints:
+                rows.append({
+                    "level": "danger",
+                    "file": rel,
+                    "type": "url_for",
+                    "message": f"Endpoint introuvable : {endpoint}",
+                    "detail": "Corriger le nom d’endpoint ou supprimer le lien.",
+                })
+
+        for endpoint in endpoint_re.findall(text):
+            if endpoint not in endpoints:
+                rows.append({
+                    "level": "warning",
+                    "file": rel,
+                    "type": "request.endpoint",
+                    "message": f"Comparaison avec endpoint inexistant : {endpoint}",
+                    "detail": "Peut simplement empêcher le bon état actif du menu.",
+                })
+
+        if has_perm_re.search(text):
+            rows.append({
+                "level": "danger",
+                "file": rel,
+                "type": "has_perm",
+                "message": "Usage de has_perm(...) dans un template.",
+                "detail": "Utiliser can(...) dans les templates.",
+            })
+
+    if not rows:
+        rows.append({
+            "level": "ok",
+            "file": "templates",
+            "type": "audit",
+            "message": "Aucun problème évident détecté dans les templates.",
+            "detail": "",
+        })
+
+    return rows
+
+
+def _p03f_code_without_comments(text: str) -> str:
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            continue
+        lines.append(line)
+    return "\n".join(lines)
+
+
+def _p03f_has_unguarded_sqlite_strftime(text: str) -> bool:
+    clean = _p03f_code_without_comments(text)
+    needle = "func." + "strftime"
+    if needle not in clean:
+        return False
+
+    # Cas admis : fonction helper qui choisit explicitement SQLite vs PostgreSQL.
+    lowered = clean.lower()
+    if "_dialect_name" in clean and "sqlite" in lowered and ("date_trunc" in lowered or "to_char" in lowered):
+        return False
+
+    return True
+
+
+def _p03f_scan_python_routes():
+    app_dir = Path(current_app.root_path)
+    endpoints = _p03f_collect_endpoints()
+    rows = []
+    url_for_re = re.compile(r"(?<!safe_)url_for\(\s*['\"]([^'\"]+)['\"]")
+
+    ignored_suffixes = (" - Copie.py", ".bak", ".old", ".tmp")
+
+    for path in sorted(app_dir.rglob("*.py")):
+        if "__pycache__" in path.parts:
+            continue
+        if path.name.endswith(ignored_suffixes):
+            continue
+
+        rel = path.relative_to(app_dir.parent).as_posix()
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            text = path.read_text(encoding="latin-1", errors="ignore")
+
+        for endpoint in url_for_re.findall(text):
+            if endpoint not in endpoints:
+                rows.append({
+                    "level": "warning",
+                    "file": rel,
+                    "type": "url_for python",
+                    "message": f"Endpoint potentiellement introuvable : {endpoint}",
+                    "detail": "À vérifier : certains endpoints peuvent être conditionnels ou rarement utilisés.",
+                })
+
+        if _p03f_has_unguarded_sqlite_strftime(text):
+            rows.append({
+                "level": "danger",
+                "file": rel,
+                "type": "postgres",
+                "message": "Usage SQL strftime non protégé détecté.",
+                "detail": "Remplacer par extract(...) ou prévoir un branchement SQLite/PostgreSQL.",
+            })
+
+    if not rows:
+        rows.append({
+            "level": "ok",
+            "file": "app",
+            "type": "audit",
+            "message": "Aucun problème évident détecté dans les routes Python.",
+            "detail": "",
+        })
+
+    return rows
+
+
+
+@bp.route("/controle/navigation")
+@login_required
+@require_perm("controle:view")
+def controle_navigation():
+    template_rows = _p03f_scan_templates()
+    python_rows = _p03f_scan_python_routes()
+    all_rows = template_rows + python_rows
+
+    summary = {
+        "danger": sum(1 for r in all_rows if r.get("level") == "danger"),
+        "warning": sum(1 for r in all_rows if r.get("level") == "warning"),
+        "ok": sum(1 for r in all_rows if r.get("level") == "ok"),
+        "total": len(all_rows),
+    }
+
+    return render_template(
+        "controle_navigation.html",
+        summary=summary,
+        template_rows=template_rows,
+        python_rows=python_rows,
+    )
+
+
 @bp.route("/setup-start")
 def setup_start():
     # simple page de diagnostic / aide
@@ -814,7 +1241,17 @@ def subventions_list():
 
     subs_q = base_q.filter(Subvention.annee_exercice == selected_year)
     subs = subs_q.order_by(Subvention.annee_exercice.desc(), Subvention.nom.asc()).all()
-    return render_template("subventions_list.html", subs=subs, secteurs=secteurs, selected_year=selected_year, available_years=years)
+
+    default_secteur = current_user.secteur_assigne if not can("scope:all_secteurs") else (secteurs[0] if secteurs else None)
+    categories_ref = _budget_categories_ref_for_secteur(default_secteur)
+    return render_template(
+        "subventions_list.html",
+        subs=subs,
+        secteurs=secteurs,
+        selected_year=selected_year,
+        available_years=years,
+        categories_ref=categories_ref,
+    )
 
 
 @bp.route("/subvention/nouvelle", methods=["POST"])
@@ -848,6 +1285,23 @@ def subvention_create():
         montant_recu=montant_recu,
     )
     db.session.add(s)
+    db.session.flush()
+
+    selected_cat_ids = [int(x) for x in request.form.getlist("categorie_ref_id") if str(x).isdigit()]
+    if selected_cat_ids:
+        cats = BudgetCategorieReferentiel.query.filter(BudgetCategorieReferentiel.id.in_(selected_cat_ids)).all()
+        for cat in cats:
+            if not _budget_category_allowed(cat, secteur):
+                continue
+            db.session.add(LigneBudget(
+                subvention_id=s.id,
+                nature=cat.nature,
+                compte=_budget_category_compte_label(cat) or ("74" if cat.nature == "produit" else "60"),
+                libelle=cat.libelle,
+                montant_base=float(cat.montant_defaut or 0.0),
+                montant_reel=0.0,
+            ))
+
     db.session.commit()
 
     flash("Subvention créée.", "success")
@@ -879,12 +1333,23 @@ def subvention_pilotage(subvention_id):
 
         # --- Ajouter une ligne ---
         if action == "add_ligne":
-            compte = (request.form.get("compte") or "60").strip()
-            libelle = (request.form.get("libelle") or "").strip()
-            montant_base = float(request.form.get("montant_base") or 0)
-            montant_reel = float(request.form.get("montant_reel") or 0)
             nature = (request.form.get("nature") or "charge").strip()
+            cat_id = int(request.form.get("categorie_ref_id") or 0)
+            cat = None
+            if cat_id:
+                cat = BudgetCategorieReferentiel.query.get_or_404(cat_id)
+                if not _budget_category_allowed(cat, sub.secteur):
+                    abort(400)
+                nature = cat.nature
 
+            compte_default = _budget_category_compte_label(cat) if cat else ("74" if nature == "produit" else "60")
+            libelle_default = cat.libelle if cat else ""
+            montant_default = float(cat.montant_defaut or 0.0) if cat else 0.0
+
+            compte = (request.form.get("compte") or compte_default).strip()
+            libelle = (request.form.get("libelle") or libelle_default).strip()
+            montant_base = _parse_money(request.form.get("montant_base"), montant_default)
+            montant_reel = _parse_money(request.form.get("montant_reel"), 0.0)
 
             if not libelle:
                 flash("Libellé obligatoire.", "danger")
@@ -983,7 +1448,8 @@ def subvention_pilotage(subvention_id):
         total_base=total_base,
         theor_recu=theor_recu,
         theor_attribue=theor_attribue,
-        warnings=warnings
+        warnings=warnings,
+        categories_ref=_budget_categories_ref_for_secteur(sub.secteur),
     )
 
 
@@ -1015,11 +1481,18 @@ def ligne_edit(ligne_id):
     if not can_see_secteur(sub.secteur):
         abort(403)
 
-    l.nature = (request.form.get("nature") or getattr(l, "nature", "charge")).strip()
-    l.compte = (request.form.get("compte") or l.compte).strip()
-    l.libelle = (request.form.get("libelle") or l.libelle).strip()
-    l.montant_base = float(request.form.get("montant_base") or l.montant_base or 0)
-    l.montant_reel = float(request.form.get("montant_reel") or l.montant_reel or 0)
+    cat_id = int(request.form.get("categorie_ref_id") or 0)
+    cat = None
+    if cat_id:
+        cat = BudgetCategorieReferentiel.query.get_or_404(cat_id)
+        if not _budget_category_allowed(cat, sub.secteur):
+            abort(400)
+
+    l.nature = (request.form.get("nature") or (cat.nature if cat else getattr(l, "nature", "charge"))).strip()
+    l.compte = (request.form.get("compte") or (_budget_category_compte_label(cat) if cat else l.compte)).strip()
+    l.libelle = (request.form.get("libelle") or (cat.libelle if cat else l.libelle)).strip()
+    l.montant_base = _parse_money(request.form.get("montant_base"), l.montant_base or 0)
+    l.montant_reel = _parse_money(request.form.get("montant_reel"), l.montant_reel or 0)
     db.session.commit()
 
     flash("Ligne modifiée.", "success")

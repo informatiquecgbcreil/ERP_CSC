@@ -45,4 +45,4 @@ def sync_ateliers():
         flash(f"Synchronisation OK : {n} atelier(s) mis à jour.", "success")
     except Exception as e:
         flash(f"Erreur sync présence : {e}", "danger")
-    return redirect(url_for("ateliers.list_ateliers"))
+    return redirect(url_for("activite.index"))

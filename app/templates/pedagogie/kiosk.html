@@ -3,8 +3,8 @@
 {% block body %}
 <div class="stack">
   <div class="card">
-    <h1 style="margin-top:0;">Kiosk pédagogique (V1 souple)</h1>
-    <p class="muted">Saisie rapide des objectifs <b>généraux, spécifiques et opérationnels</b>, avec mode ressenti/compétence/mixte.</p>
+    <h1 style="margin-top:0;">Observation de séance</h1>
+    <p class="muted">Observation rapide des apprentissages explicitement choisis pour cette séance.</p>
 
     <form method="get" class="inline" style="gap:8px; flex-wrap:wrap; align-items:flex-end;">
       <div>
@@ -27,13 +27,13 @@
         </select>
       </div>
       <button class="btn" type="submit">Ouvrir</button>
-      <a class="btn" href="{{ url_for('pedagogie.objectifs') }}">Voir objectifs détaillés</a>
+      <a class="btn" href="{{ url_for('pedagogie.objectifs') }}">Gérer les anciens objectifs</a>
     </form>
   </div>
 
   {% if selected_session %}
     <div class="card">
-      <h2 style="margin-top:0;">Saisie rapide</h2>
+      <h2 style="margin-top:0;">Observation rapide</h2>
       <form method="post" class="stack" style="gap:10px;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="hidden" name="participant_id" value="{{ selected_participant_id or '' }}">
@@ -90,7 +90,7 @@
             <button class="btn ok" type="submit">Enregistrer la saisie</button>
           </div>
         {% else %}
-          <div class="muted">Aucun objectif lié à cette session (général, spécifique ou opérationnel).</div>
+          <div class="muted">Aucun apprentissage n’a été choisi pour cette séance. Passe par “Suivi des apprentissages” pour ajouter ce qui est travaillé aujourd’hui.</div>
         {% endif %}
       </form>
     </div>

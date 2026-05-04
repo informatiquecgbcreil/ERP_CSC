@@ -55,6 +55,276 @@ def _normalize_note_category(raw: str | None) -> str:
     return val if val in PASSPORT_NOTE_CATEGORIES else "journal"
 
 
+
+# ============================================================
+# P0.4I/J — Suivi des apprentissages : séance complète
+# ============================================================
+
+def _session_label(session):
+    if not session:
+        return "Séance"
+    date_ref = session.date_session or session.rdv_date or session.created_at.date()
+    atelier = session.atelier.nom if getattr(session, "atelier", None) else "Atelier"
+    return f"{date_ref} · {atelier} · #{session.id}"
+
+
+def _evaluation_label(etat):
+    labels = {
+        0: "En difficulté",
+        1: "En progression",
+        2: "Réussi",
+        3: "Très à l’aise",
+    }
+    return labels.get(etat, "Non observé")
+
+
+@bp.route("/")
+@login_required
+@require_perm("pedagogie:view")
+def index():
+    """Entrée simplifiée du suivi des apprentissages."""
+    return redirect(url_for("pedagogie.apprentissages_home"))
+
+
+@bp.route("/apprentissages")
+@login_required
+@require_perm("pedagogie:view")
+def apprentissages_home():
+    """Liste de séances pour ouvrir l'écran complet d'observation."""
+    atelier_id = request.args.get("atelier_id", type=int)
+
+    sessions_q = (
+        SessionActivite.query
+        .filter(SessionActivite.is_deleted.is_(False))
+        .order_by(
+            SessionActivite.date_session.desc().nullslast(),
+            SessionActivite.rdv_date.desc().nullslast(),
+            SessionActivite.created_at.desc(),
+        )
+    )
+    if atelier_id:
+        sessions_q = sessions_q.filter(SessionActivite.atelier_id == atelier_id)
+
+    sessions = sessions_q.limit(120).all()
+    ateliers = (
+        AtelierActivite.query
+        .filter(AtelierActivite.is_deleted.is_(False))
+        .order_by(AtelierActivite.nom.asc())
+        .all()
+    )
+
+    return render_template(
+        "pedagogie/apprentissages.html",
+        sessions=sessions,
+        ateliers=ateliers,
+        selected_atelier_id=atelier_id,
+        session_label=_session_label,
+    )
+
+
+@bp.route("/seance/<int:session_id>", methods=["GET", "POST"])
+@login_required
+@require_perm("pedagogie:view")
+def seance_complete(session_id):
+    """Écran séance complète.
+
+    Source de vérité des observations :
+    Evaluation(participant_id, session_id, competence_id, etat, commentaire).
+
+    L’intention et le bilan de séance sont portés par SessionActivite.
+    """
+    session = SessionActivite.query.get_or_404(session_id)
+
+    if request.method == "POST":
+        action = request.form.get("action")
+
+        if action == "save_competences":
+            ids = [int(x) for x in request.form.getlist("competence_ids") if x and x.isdigit()]
+            competences = Competence.query.filter(Competence.id.in_(ids)).all() if ids else []
+            session.competences = competences
+            db.session.commit()
+            flash("Savoir-faire observés mis à jour pour cette séance.", "success")
+            return redirect(url_for("pedagogie.seance_complete", session_id=session.id))
+
+        if action == "save_session_objectif":
+            titre = (request.form.get("titre") or "").strip()
+            description = (request.form.get("description") or "").strip()
+
+            if len(titre) < 3:
+                flash("Indique une intention de séance lisible.", "warning")
+                return redirect(url_for("pedagogie.seance_complete", session_id=session.id))
+
+            session.intention_seance = titre
+            session.intention_seance_detail = description
+            db.session.commit()
+            flash("Intention de séance enregistrée.", "success")
+            return redirect(url_for("pedagogie.seance_complete", session_id=session.id))
+
+        if action == "save_bilan_qualitatif":
+            session.pertinence = (request.form.get("pertinence") or "").strip() or None
+            session.difficulte = (request.form.get("difficulte") or "").strip() or None
+            session.participation_groupe = (request.form.get("participation_groupe") or "").strip() or None
+            session.a_reprendre = bool(request.form.get("a_reprendre"))
+            session.bilan_qualitatif = (request.form.get("bilan_qualitatif") or "").strip() or None
+            session.commentaire_pedagogique = (request.form.get("commentaire_pedagogique") or "").strip() or None
+
+            db.session.commit()
+            flash("Bilan qualitatif de séance enregistré.", "success")
+            return redirect(url_for("pedagogie.seance_complete", session_id=session.id))
+
+        if action == "link_objectifs":
+            objectif_ids = [int(x) for x in request.form.getlist("objectif_ids") if x and x.isdigit()]
+            if not session.competences:
+                flash("Ajoute d’abord des savoir-faire observés à la séance.", "warning")
+                return redirect(url_for("pedagogie.seance_complete", session_id=session.id))
+
+            objectifs = Objectif.query.filter(Objectif.id.in_(objectif_ids)).all() if objectif_ids else []
+            for obj in objectifs:
+                for competence in session.competences:
+                    if competence not in obj.competences:
+                        obj.competences.append(competence)
+
+            db.session.commit()
+            flash("Objectifs de projet alimentés par les savoir-faire de cette séance.", "success")
+            return redirect(url_for("pedagogie.seance_complete", session_id=session.id))
+
+        if action == "save_observations":
+            presences = PresenceActivite.query.filter_by(session_id=session.id).all()
+            participant_ids = [p.participant_id for p in presences]
+            competence_ids = [c.id for c in session.competences]
+
+            existing = {}
+            if participant_ids and competence_ids:
+                rows = (
+                    Evaluation.query
+                    .filter(
+                        Evaluation.session_id == session.id,
+                        Evaluation.participant_id.in_(participant_ids),
+                        Evaluation.competence_id.in_(competence_ids),
+                    )
+                    .all()
+                )
+                existing = {(row.participant_id, row.competence_id): row for row in rows}
+
+            saved = 0
+            deleted = 0
+            for participant_id in participant_ids:
+                for competence_id in competence_ids:
+                    key = (participant_id, competence_id)
+                    raw = request.form.get(f"etat_{participant_id}_{competence_id}", "")
+                    commentaire = (request.form.get(f"commentaire_{participant_id}_{competence_id}") or "").strip()
+                    ev = existing.get(key)
+
+                    if raw == "":
+                        if ev and not commentaire:
+                            db.session.delete(ev)
+                            deleted += 1
+                        elif ev:
+                            ev.commentaire = commentaire
+                        continue
+
+                    try:
+                        etat = int(raw)
+                    except ValueError:
+                        continue
+                    if etat not in (0, 1, 2, 3):
+                        continue
+
+                    if not ev:
+                        ev = Evaluation(
+                            participant_id=participant_id,
+                            competence_id=competence_id,
+                            session_id=session.id,
+                            user_id=current_user.id,
+                            etat=etat,
+                            date_evaluation=datetime.date.today(),
+                            commentaire=commentaire,
+                        )
+                        db.session.add(ev)
+                    else:
+                        ev.etat = etat
+                        ev.commentaire = commentaire
+                        ev.user_id = current_user.id
+                        ev.date_evaluation = datetime.date.today()
+
+                    saved += 1
+
+            db.session.commit()
+            flash(f"Observations enregistrées ({saved})." + (f" Observations supprimées : {deleted}." if deleted else ""), "success")
+            return redirect(url_for("pedagogie.seance_complete", session_id=session.id))
+
+    presences = (
+        PresenceActivite.query
+        .filter(PresenceActivite.session_id == session.id)
+        .join(PresenceActivite.participant)
+        .order_by(PresenceActivite.created_at.asc())
+        .all()
+    )
+
+    competences = list(session.competences)
+    competence_ids = [c.id for c in competences]
+    participant_ids = [p.participant_id for p in presences]
+
+    evaluations = {}
+    if competence_ids and participant_ids:
+        rows = (
+            Evaluation.query
+            .filter(
+                Evaluation.session_id == session.id,
+                Evaluation.participant_id.in_(participant_ids),
+                Evaluation.competence_id.in_(competence_ids),
+            )
+            .all()
+        )
+        evaluations = {(row.participant_id, row.competence_id): row for row in rows}
+
+    referentiels = Referentiel.query.order_by(Referentiel.nom.asc()).all()
+
+    available_objectifs = (
+        Objectif.query
+        .filter(Objectif.type == "operationnel")
+        .filter(Objectif.session_id.is_(None))
+        .order_by(Objectif.titre.asc())
+        .limit(300)
+        .all()
+    )
+
+    objectifs_nourris = []
+    if competence_ids:
+        objectifs_nourris = (
+            Objectif.query
+            .join(objectif_competence, Objectif.id == objectif_competence.c.objectif_id)
+            .filter(objectif_competence.c.competence_id.in_(competence_ids))
+            .filter(Objectif.session_id.is_(None))
+            .distinct()
+            .order_by(Objectif.type.asc(), Objectif.titre.asc())
+            .all()
+        )
+
+    counts_by_competence = {}
+    for competence in competences:
+        counts_by_competence[competence.id] = {0: 0, 1: 0, 2: 0, 3: 0, "total": 0}
+    for ev in evaluations.values():
+        if ev.competence_id in counts_by_competence and ev.etat in (0, 1, 2, 3):
+            counts_by_competence[ev.competence_id][ev.etat] += 1
+            counts_by_competence[ev.competence_id]["total"] += 1
+
+    return render_template(
+        "pedagogie/seance_complete.html",
+        session=session,
+        session_label=_session_label,
+        presences=presences,
+        competences=competences,
+        referentiels=referentiels,
+        evaluations=evaluations,
+        etat_label=_evaluation_label,
+        available_objectifs=available_objectifs,
+        objectifs_nourris=objectifs_nourris,
+        counts_by_competence=counts_by_competence,
+    )
+
+
+
 # ============================================================
 # Référentiels
 # ============================================================

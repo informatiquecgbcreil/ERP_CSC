@@ -8,6 +8,7 @@
       <p class="page-subtitle">Retrouve les projets, leur état d’avancement et leur suivi budgétaire depuis une vue unique.</p>
     </div>
     <div class="hero-actions">
+      <a class="btn" href="{{ url_for('projets.finance_secteur') }}">Pilotage annuel</a>
       <a class="btn ok" href="{{ url_for('projets.projets_new') }}">Ajouter un projet</a>
     </div>
   </div>
@@ -46,6 +47,7 @@
               <td>
                 <div class="inline-actions">
                   <a class="btn" href="{{ url_for('projets.projets_edit', projet_id=p.id) }}">Voir le projet</a>
+                  <a class="btn ok" href="{{ url_for('projets.projet_finance', projet_id=p.id) }}">Finances</a>
                   <form method="post" action="{{ url_for('projets.projets_delete', projet_id=p.id) }}" onsubmit="return confirm('Supprimer définitivement ce projet ? Cette action est irréversible.');">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn danger" type="submit">Supprimer</button>

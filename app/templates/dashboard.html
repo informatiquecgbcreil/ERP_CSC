@@ -52,6 +52,102 @@
     min-height:180px;
     height:180px;
   }
+
+  .intent-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:12px;
+  }
+  .intent-card{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    min-height:170px;
+    padding:16px;
+    border:1px solid rgba(120,130,160,.22);
+    border-radius:20px;
+    background:linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,255,255,.48));
+    text-decoration:none;
+    color:inherit;
+    box-shadow:0 8px 24px rgba(15,23,42,.06);
+  }
+  .intent-card:hover{
+    transform:translateY(-1px);
+    box-shadow:0 12px 30px rgba(15,23,42,.10);
+  }
+  .intent-card__top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:10px;
+  }
+  .intent-card__icon{
+    font-size:1.5rem;
+    line-height:1;
+  }
+  .intent-card__title{
+    font-weight:950;
+    font-size:1.05rem;
+  }
+  .intent-card__desc{
+    color:var(--muted,#667085);
+    line-height:1.38;
+    flex:1;
+  }
+  .intent-card__links{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-top:auto;
+  }
+  .mini-link{
+    display:inline-flex;
+    align-items:center;
+    border:1px solid rgba(120,130,160,.25);
+    border-radius:999px;
+    padding:6px 9px;
+    font-size:.86rem;
+    font-weight:800;
+    color:inherit;
+    text-decoration:none;
+    background:rgba(255,255,255,.55);
+  }
+  .mini-link:hover{
+    background:rgba(120,130,160,.10);
+  }
+  .resume-strip{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:10px;
+    margin-top:12px;
+  }
+  .resume-pill{
+    border:1px solid rgba(120,130,160,.22);
+    border-radius:18px;
+    padding:12px;
+    background:rgba(255,255,255,.62);
+  }
+  .resume-pill .label{
+    color:var(--muted,#667085);
+    font-size:.84rem;
+    font-weight:800;
+  }
+  .resume-pill .value{
+    font-weight:950;
+    font-size:1.15rem;
+    margin-top:3px;
+  }
+  .resume-pill.danger{border-color:rgba(239,68,68,.35);background:rgba(239,68,68,.07);}
+  .resume-pill.warn{border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.07);}
+  .resume-pill.ok{border-color:rgba(34,197,94,.35);background:rgba(34,197,94,.07);}
+
+  @media(max-width:900px){
+    .resume-strip{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media(max-width:640px){
+    .intent-grid,.resume-strip{grid-template-columns:1fr;}
+    .intent-card{min-height:unset;}
+  }
 </style>
 
 <div class="stack">
@@ -96,6 +192,135 @@
       </details>
     {% endif %}
   </section>
+
+  {% if mode != "admin_tech" %}
+  <section class="section-card">
+    <div class="section-head">
+      <div>
+        <h2 style="margin:0;">Je veux faire quoi ?</h2>
+        <div class="muted">Les grandes portes d’entrée de l’application, selon tes droits.</div>
+      </div>
+      <div class="inline-actions">
+        <a class="btn" href="{{ url_for('main.dashboard_customize') }}">Personnaliser</a>
+      </div>
+    </div>
+
+    <div class="intent-grid">
+      {% if can('projets:view') or can('subventions:view') or can('depenses:view') %}
+      <div class="intent-card">
+        <div class="intent-card__top">
+          <div>
+            <div class="intent-card__title">Piloter les finances</div>
+            <div class="intent-card__desc">Voir les enveloppes, saisir une dépense financée, contrôler les répartitions et exporter.</div>
+          </div>
+          <div class="intent-card__icon">💰</div>
+        </div>
+        <div class="intent-card__links">
+          <a class="mini-link" href="{{ url_for('projets.finance_home') }}">Accueil finances</a>
+          {% if can('projets:view') %}<a class="mini-link" href="{{ url_for('projets.finance_simple') }}">Vue simple</a>{% endif %}
+          {% if can('depenses:view') %}<a class="mini-link" href="{{ url_for('budget.depenses_list') }}">Dépenses</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if can('emargement:view') or can('statsimpact:view') or can('pedagogie:view') %}
+      <div class="intent-card">
+        <div class="intent-card__top">
+          <div>
+            <div class="intent-card__title">Gérer les activités</div>
+            <div class="intent-card__desc">Accéder aux présences, aux données ateliers et au suivi pédagogique.</div>
+          </div>
+          <div class="intent-card__icon">🧩</div>
+        </div>
+        <div class="intent-card__links">
+          <a class="mini-link" href="{{ url_for('main.hub_activites') }}">Accueil activités</a>
+          {% if can('emargement:view') %}<a class="mini-link" href="{{ url_for('activite.index') }}">Présences</a>{% endif %}
+          {% if can('statsimpact:view') or can('stats:view') %}<a class="mini-link" href="{{ url_for('statsimpact.dashboard') }}">Données</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if can('participants:view') or can('participants:view_all') or can('insertion:view') %}
+      <div class="intent-card">
+        <div class="intent-card__top">
+          <div>
+            <div class="intent-card__title">Suivre les publics</div>
+            <div class="intent-card__desc">Retrouver une fiche, créer un participant, suivre les parcours et les territoires.</div>
+          </div>
+          <div class="intent-card__icon">👥</div>
+        </div>
+        <div class="intent-card__links">
+          <a class="mini-link" href="{{ url_for('main.hub_publics') }}">Accueil publics</a>
+          {% if can('participants:view') or can('participants:view_all') %}<a class="mini-link" href="{{ url_for('participants.list_participants') }}">Participants</a>{% endif %}
+          {% if can('insertion:view') %}<a class="mini-link" href="{{ url_for('insertion.index') }}">Insertion</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      {% if can('stats:view') or can('bilans:view') or can('questionnaires:view') %}
+      <div class="intent-card">
+        <div class="intent-card__top">
+          <div>
+            <div class="intent-card__title">Préparer les bilans</div>
+            <div class="intent-card__desc">Vérifier les données, consulter les indicateurs et préparer les exports financeurs.</div>
+          </div>
+          <div class="intent-card__icon">📊</div>
+        </div>
+        <div class="intent-card__links">
+          <a class="mini-link" href="{{ url_for('main.hub_bilans') }}">Accueil bilans</a>
+          {% if can('stats:view') %}<a class="mini-link" href="{{ url_for('main.stats_bilans') }}">Stats</a>{% endif %}
+          {% if can('bilans:view') %}<a class="mini-link" href="{{ url_for('bilans.dashboard', year=budget_year) }}">Bilans</a>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="resume-strip">
+      {% set alert_count = alerts|length if alerts else 0 %}
+      <div class="resume-pill {{ 'danger' if alert_count > 0 else 'ok' }}">
+        <div class="label">À vérifier</div>
+        <div class="value">{{ alert_count }} alerte{{ 's' if alert_count > 1 else '' }}</div>
+      </div>
+      <div class="resume-pill">
+        <div class="label">Sessions</div>
+        <div class="value">{{ kpis.sessions or 0 }}</div>
+      </div>
+      <div class="resume-pill">
+        <div class="label">Participants uniques</div>
+        <div class="value">{{ kpis.uniques or 0 }}</div>
+      </div>
+      <div class="resume-pill {{ 'warn' if (kpis.taux or 0) >= 80 else 'ok' }}">
+        <div class="label">Consommation budget</div>
+        <div class="value">{{ kpis.taux or 0 }}%</div>
+      </div>
+    </div>
+  </section>
+  {% else %}
+  <section class="section-card">
+    <div class="section-head">
+      <div>
+        <h2 style="margin:0;">Administration rapide</h2>
+        <div class="muted">Les entrées utiles pour maintenir l’application propre.</div>
+      </div>
+    </div>
+    <div class="intent-grid">
+      <div class="intent-card">
+        <div class="intent-card__top">
+          <div>
+            <div class="intent-card__title">Contrôler l’application</div>
+            <div class="intent-card__desc">Lancer les contrôles techniques et repérer les liens cassés.</div>
+          </div>
+          <div class="intent-card__icon">🛠️</div>
+        </div>
+        <div class="intent-card__links">
+          {% if can('controle:view') %}<a class="mini-link" href="{{ url_for('main.controle') }}">Contrôle</a>{% endif %}
+          {% if can('controle:view') %}<a class="mini-link" href="{{ url_for('main.controle_navigation') }}">Audit navigation</a>{% endif %}
+          {% if can('admin:users') %}<a class="mini-link" href="{{ url_for('admin.users') }}">Équipe</a>{% endif %}
+        </div>
+      </div>
+    </div>
+  </section>
+  {% endif %}
 
   <section class="section-card">
     <div class="section-head">

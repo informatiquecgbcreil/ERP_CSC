@@ -8,7 +8,8 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/feedback-kit.css') }}">
 
-  <meta name="csrf-token" content="{{ csrf_token() }}">
+      <link rel="stylesheet" href="{{ url_for('static', filename='css/p03e-responsive.css') }}">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 
   <style>
     :root{
@@ -44,9 +45,6 @@
       --option-text: var(--text);
 
       --focus: rgba(106,165,255,.35);
-      --font-size-base: 16px;
-      --font-size-muted: 14px;
-      --touch-target-min: 44px;
     }
 
     html[data-theme="light"]{
@@ -81,21 +79,16 @@
       --option-bg: #ffffff;
       --option-text: var(--text);
 
-      --focus: rgba(29,78,216,.28);
-      --font-size-base: 16px;
-      --font-size-muted: 14px;
-      --touch-target-min: 44px;
+      --focus: rgba(29,78,216,.18);
     }
 
     *{ box-sizing:border-box; }
 
     body{
       margin:0;
-      font-family: "Atkinson Hyperlegible", "Arial", "Verdana", "Tahoma", system-ui, sans-serif;
+      font-family: system-ui, "Segoe UI", Roboto, Arial;
       background: linear-gradient(180deg, var(--bg-grad-1), var(--bg-grad-2));
       color: var(--text);
-      font-size: var(--font-size-base);
-      line-height: 1.5;
     }
 
     a{ color:inherit; text-decoration:none; }
@@ -103,20 +96,6 @@
 
     .wrap{ max-width:1180px; margin:0 auto; padding:14px 16px; }
     .container{ max-width:1180px; margin:0 auto; padding:18px 16px 46px; }
-
-    .skip-link{
-      position:absolute;
-      left:10px;
-      top:-60px;
-      z-index:1000;
-      background: var(--surface-strong);
-      border:2px solid var(--accent);
-      border-radius:10px;
-      padding:10px 12px;
-      color:var(--text);
-      font-weight:700;
-    }
-    .skip-link:focus{ top:10px; }
 
     .topbar{
       position:sticky; top:0; z-index:10;
@@ -177,24 +156,6 @@
       flex-wrap:wrap;
       gap:8px;
       z-index:20;
-      max-height:min(70vh, 520px);
-      overflow:auto;
-    }
-    .nav-more-section-title{
-      width:100%;
-      font-size:11px;
-      font-weight:800;
-      text-transform:uppercase;
-      letter-spacing:.4px;
-      color:var(--muted);
-      padding:8px 2px 0;
-      margin-top:6px;
-      border-top:1px solid color-mix(in srgb, var(--border) 80%, transparent);
-    }
-    .nav-more-section-title:first-child{
-      border-top:none;
-      margin-top:0;
-      padding-top:2px;
     }
 
     .nav-more-panel .pill{
@@ -202,16 +163,30 @@
       text-align:left;
     }
 
+    .nav-more-heading{
+      width:100%;
+      margin:6px 0 0;
+      padding-top:6px;
+      border-top:1px solid color-mix(in srgb, var(--border) 80%, transparent);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.5px;
+      color:var(--muted);
+      font-weight:900;
+    }
+    .nav-more-heading:first-child{
+      margin-top:0;
+      padding-top:0;
+      border-top:0;
+    }
+
     .pill{
-      padding:10px 14px;
+      padding:8px 12px;
       border:1px solid var(--border-soft);
       border-radius:999px;
       background: color-mix(in srgb, var(--surface) 70%, transparent);
       cursor:pointer;
       user-select:none;
-      min-height: var(--touch-target-min);
-      display:inline-flex;
-      align-items:center;
       transition:border-color .15s ease, background .15s ease;
     }
 
@@ -220,14 +195,9 @@
       border-color: color-mix(in srgb, var(--accent) 60%, transparent);
       background: color-mix(in srgb, var(--accent) 12%, var(--surface));
     }
-    .pill:focus-visible, .btn:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible{
-      outline: 3px solid color-mix(in srgb, var(--accent) 82%, #ffffff);
-      outline-offset: 2px;
-      box-shadow: 0 0 0 4px var(--focus);
-    }
 
     .right{ margin-left:auto; display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .global-search{ position:relative; min-width:200px; max-width:360px; width:min(32vw, 360px); }
+    .global-search{ position:relative; min-width:280px; max-width:420px; width:min(40vw, 420px); }
     .global-search input{
       width:100%;
       border:1px solid var(--input-border);
@@ -453,11 +423,7 @@
       color:var(--muted);
       font-weight:700;
     }
-    .mode-switch .pill{ padding:10px 14px; min-height: var(--touch-target-min); }
-    @media (max-width: 1220px){
-      .global-search{ min-width:160px; width:220px; }
-      .mode-switch__label{ display:none; }
-    }
+    .mode-switch .pill{ padding:6px 10px; }
     .easy-banner{
       margin:10px 0 0;
       border:1px solid var(--border-soft);
@@ -473,26 +439,40 @@
     .easy-banner__text{ color:var(--muted); font-size:13px; }
     .context-banner--simple{ gap:6px; }
     .context-banner--simple .context-badge{ font-size:11px; }
-    body[data-device-mode="mobile"] .nav{ gap:6px; }
-    body[data-device-mode="mobile"] .right{ width:100%; justify-content:flex-start; }
-    body[data-device-mode="mobile"] .global-search{ width:100%; max-width:none; min-width:0; }
-    body[data-device-mode="mobile"] .nav-more-panel{ position:fixed; left:10px; right:10px; top:76px; min-width:0; }
-    body[data-device-mode="tablet"] .global-search{ min-width:160px; width:240px; }
-    body[data-device-mode="kiosk"]{ font-size:18px; }
-    body[data-device-mode="kiosk"] .pill,
-    body[data-device-mode="kiosk"] .btn{ min-height:56px; font-size:18px; padding:12px 18px; }
 
-  </style>
+  
+    .nav-more-panel{
+      max-height:min(72vh, 620px);
+      overflow:auto;
+      overscroll-behavior:contain;
+    }
+    .nav-category-row{
+      display:flex;
+      flex-wrap:wrap;
+      align-items:center;
+      gap:8px;
+    }
+    .nav-category-row .nav-more{margin:0;}
+    .nav-category-row .nav-more > summary.pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+    }
+    .nav-category-row .nav-more > summary.pill::after{
+      content:"▾";
+      font-size:10px;
+      opacity:.75;
+    }
+
+</style>
   {% block head_extra %}{% endblock %}
 </head>
 
-<body data-device-mode="{{ UI_DEVICE_MODE if UI_DEVICE_MODE is defined else 'desktop' }}" class="mode-{{ UI_DEVICE_MODE if UI_DEVICE_MODE is defined else 'desktop' }}">
-  <a class="skip-link" href="#main-content">Aller au contenu principal</a>
+<body>
   {% set ep = request.endpoint or '' %}
   {% set embed = request.args.get('embed') %}
   {% set ui_mode = UI_MODE if UI_MODE is defined else 'simple' %}
   {% set ui_simplified = UI_SIMPLIFIED if UI_SIMPLIFIED is defined else true %}
-  {% set ui_device_mode = UI_DEVICE_MODE if UI_DEVICE_MODE is defined else 'desktop' %}
 
   {% if not embed %}
   <div class="topbar">
@@ -501,55 +481,230 @@
         <div class="brand" style="display:flex;align-items:center;gap:8px;">{% if APP_LOGO_URL %}<img src="{{ APP_LOGO_URL }}" alt="Logo application" style="height:28px;width:28px;object-fit:contain;border-radius:6px;">{% endif %}<span>{{ APP_NAME }}</span></div>
 
         {% if current_user.is_authenticated %}
-          {% if can('dashboard:view') %}<a class="pill {% if ep.startswith('main.dashboard') %}active{% endif %}" href="{{ url_for('main.dashboard') }}">Accueil</a>{% endif %}
-          {% if can('participants:view') or can('participants:view_all') %}<a class="pill {% if ep.startswith('participants.') %}active{% endif %}" href="{{ url_for('participants.list_participants') }}">Participants</a>{% endif %}
-          {% if can('emargement:view') %}<a class="pill {% if ep.startswith('activite.') or ep.startswith('kiosk.') %}active{% endif %}" href="{{ url_for('activite.index') }}">Présences</a>{% endif %}
-          {% if not ui_simplified %}
-            {% if can('depenses:view') %}<a class="pill {% if ep.startswith('budget.depenses_list') %}active{% endif %}" href="{{ url_for('budget.depenses_list') }}">Dépenses</a>{% endif %}
-            {% if can('subventions:view') %}<a class="pill {% if ep.startswith('previsionnel.') %}active{% endif %}" href="{{ url_for('previsionnel.index') }}">Prévisionnel</a>{% endif %}
-            {% if can('stats:view') %}<a class="pill {% if ep.startswith('main.stats_bilans') or ep.startswith('main.stats') or ep.startswith('main.bilan_global') %}active{% endif %}" href="{{ url_for('main.stats_bilans') }}">Bilans</a>{% endif %}
-            {% if can('subventions:view') %}<a class="pill {% if ep.startswith('main.subventions') %}active{% endif %}" href="{{ url_for('main.subventions_list') }}">Subventions</a>{% endif %}
-            {% if can('projets:view') %}<a class="pill {% if ep.startswith('projets.') %}active{% endif %}" href="{{ url_for('projets.projets_list') }}">Projets</a>{% endif %}
-          {% endif %}
+          {% set is_finance = ep.startswith('projets.finance') or ep.startswith('budget.') or ep.startswith('main.subventions') or ep.startswith('previsionnel.') %}
+          {% set is_publics = ep == 'main.hub_publics' or ep.startswith('participants.') or ep.startswith('insertion.') or ep.startswith('quartiers.') %}
+          {% set is_presences = ep.startswith('activite.') or ep.startswith('kiosk.') %}
+          {% set is_activites = ep == 'main.hub_activites' or ep.startswith('statsimpact.') or ep.startswith('pedagogie.') %}
+          {% set is_bilans = ep == 'main.hub_bilans' or ep.startswith('main.stats_bilans') or ep.startswith('main.bilan_global') or ep.startswith('main.stats') or ep.startswith('bilans.') or ep.startswith('questionnaires.') %}
+          {% set is_ressources = ep == 'main.hub_ressources' or ep.startswith('inventaire_materiel.') or ep.startswith('partenaires.') %}
+          {% set is_admin_area = ep.startswith('admin.') or ep.startswith('main.controle') %}
 
-          <details class="nav-more">
-            <summary class="pill">Plus</summary>
-            <div class="nav-more-panel">
-              {% if ui_simplified %}
-                <div class="nav-more-section-title">Mode simple · quotidien</div>
-                {% if can('depenses:view') %}<a class="pill {% if ep.startswith('budget.depenses_list') %}active{% endif %}" href="{{ url_for('budget.depenses_list') }}">Dépenses</a>{% endif %}
-                {% if can('subventions:view') %}<a class="pill {% if ep.startswith('previsionnel.') %}active{% endif %}" href="{{ url_for('previsionnel.index') }}">Prévisionnel</a>{% endif %}
-                {% if can('stats:view') %}<a class="pill {% if ep.startswith('main.stats_bilans') or ep.startswith('main.stats') or ep.startswith('main.bilan_global') %}active{% endif %}" href="{{ url_for('main.stats_bilans') }}">Bilans</a>{% endif %}
-                {% if can('subventions:view') %}<a class="pill {% if ep.startswith('main.subventions') %}active{% endif %}" href="{{ url_for('main.subventions_list') }}">Subventions</a>{% endif %}
-                {% if can('projets:view') %}<a class="pill {% if ep.startswith('projets.') %}active{% endif %}" href="{{ url_for('projets.projets_list') }}">Projets</a>{% endif %}
-                {% if can('statsimpact:view') or can('statsimpact:view_all') %}<a class="pill {% if ep.startswith('statsimpact.') %}active{% endif %}" href="{{ url_for('statsimpact.dashboard') }}">Données ateliers</a>{% endif %}
-                {% if can('depenses:create') %}<a class="pill {% if ep.startswith('budget.depense_new') %}active{% endif %}" href="{{ url_for('budget.depense_new') }}">Nouvelle dépense</a>{% endif %}
-                {% if can('subventions:view') %}<a class="pill {% if ep.startswith('previsionnel.') %}active{% endif %}" href="{{ url_for('previsionnel.index') }}">Budget prévisionnel</a>{% endif %}
-              {% else %}
-                <div class="nav-more-section-title">Mode expert · quotidien</div>
-                {% if can('partenaires:view') %}<a class="pill {% if ep.startswith('partenaires.') %}active{% endif %}" href="{{ url_for('partenaires.index') }}">Partenaires</a>{% endif %}
-                {% if can('quartiers:view') %}<a class="pill {% if ep.startswith('quartiers.') %}active{% endif %}" href="{{ url_for('quartiers.index') }}">Quartiers</a>{% endif %}
-                {% if can('insertion:view') %}<a class="pill {% if ep.startswith('insertion.') %}active{% endif %}" href="{{ url_for('insertion.index') }}">Insertion</a>{% endif %}
-                {% if can('statsimpact:view') or can('statsimpact:view_all') %}<a class="pill {% if ep.startswith('statsimpact.') %}active{% endif %}" href="{{ url_for('statsimpact.dashboard') }}">Données ateliers</a>{% endif %}
-                {% if can('inventaire:view') %}<a class="pill {% if ep.startswith('inventaire_materiel.') %}active{% endif %}" href="{{ url_for('inventaire_materiel.list_items') }}">Inventaire</a>{% endif %}
-
-                <div class="nav-more-section-title">Mode expert · ponctuel</div>
-                {% if can('depenses:create') %}<a class="pill {% if ep.startswith('budget.depense_new') %}active{% endif %}" href="{{ url_for('budget.depense_new') }}">Nouvelle dépense</a>{% endif %}
-                {% if can('pedagogie:view') %}<a class="pill {% if ep.startswith('pedagogie.referentiels_list') %}active{% endif %}" href="{{ url_for('pedagogie.referentiels_list') }}">Pédagogie (config)</a>{% endif %}
-                {% if can('pedagogie:view') %}<a class="pill {% if ep.startswith('pedagogie.suivi_pedagogique') %}active{% endif %}" href="{{ url_for('pedagogie.suivi_pedagogique') }}">Suivi pédagogique</a>{% endif %}
-                {% if can('bilans:view') %}<a class="pill {% if ep.startswith('bilans.') %}active{% endif %}" href="{{ url_for('bilans.bilans_lourds', year=2026) }}">Bilans lourds</a>{% endif %}
-                {% if can('questionnaires:view') %}<a class="pill {% if ep.startswith('questionnaires.') %}active{% endif %}" href="{{ url_for('questionnaires.index') }}">Questionnaires</a>{% endif %}
-                {% if can('controle:view') %}<a class="pill {% if ep.startswith('main.controle') %}active{% endif %}" href="{{ url_for('main.controle') }}">Contrôle</a>{% endif %}
-
-                <div class="nav-more-section-title">Administration</div>
-                {% if can('admin:users') %}<a class="pill {% if ep.startswith('admin.users') %}active{% endif %}" href="{{ url_for('admin.users') }}">Équipe</a>{% endif %}
-                {% if can('secteurs:edit') %}<a class="pill {% if ep.startswith('admin.secteurs') %}active{% endif %}" href="{{ safe_url_for('admin.secteurs') }}">Secteurs</a>{% endif %}
-                {% if can('admin:rbac') %}<a class="pill {% if ep.startswith('admin.droits') %}active{% endif %}" href="{{ url_for('admin.droits') }}">Droits</a>{% endif %}
-                {% if can('admin:rbac') %}<a class="pill {% if ep.startswith('admin.instance_settings') %}active{% endif %}" href="{{ url_for('admin.instance_settings') }}">Identité app</a>{% endif %}
-                {% if can('ateliers:sync') %}<a class="pill {% if request.endpoint == 'admin.import_excel' %}active{% endif %}" href="{{ url_for('admin.import_excel') }}">Import Excel</a>{% endif %}
+          {% if ui_simplified %}
+            <div class="nav-quick">
+              <div class="nav-quick-label">Menu simple</div>
+              {% if can('dashboard:view') %}
+                <a class="pill {% if ep.startswith('main.dashboard') %}active{% endif %}" href="{{ url_for('main.dashboard') }}">Accueil</a>
               {% endif %}
+              {% if can('participants:view') or can('participants:view_all') %}
+                <a class="pill {% if ep.startswith('participants.') %}active{% endif %}" href="{{ url_for('main.hub_publics') }}">Participants</a>
+              {% endif %}
+              {% if can('emargement:view') %}
+                <a class="pill {% if is_presences %}active{% endif %}" href="{{ url_for('activite.index') }}">Présences</a>
+              {% endif %}
+              {% if can('statsimpact:view') or can('stats:view') %}
+                <a class="pill {% if is_activites %}active{% endif %}" href="{{ url_for('main.hub_activites') }}">Activités</a>
+              {% elif can('pedagogie:view') %}
+                <a class="pill {% if is_activites %}active{% endif %}" href="{{ url_for('main.hub_activites') }}">Activités</a>
+              {% endif %}
+              {% if can('projets:view') or can('subventions:view') or can('depenses:view') %}
+                <a class="pill {% if is_finance %}active{% endif %}" href="{{ url_for('projets.finance_home') }}">Finances</a>
+              {% endif %}
+              {% if can('stats:view') %}
+                <a class="pill {% if is_bilans %}active{% endif %}" href="{{ url_for('main.hub_bilans') }}">Bilans</a>
+              {% elif can('bilans:view') %}
+                <a class="pill {% if is_bilans %}active{% endif %}" href="{{ url_for('main.hub_bilans') }}">Bilans</a>
+              {% endif %}
+              <details class="nav-more">
+                <summary class="pill {% if is_publics or is_ressources or is_admin_area %}active{% endif %}">Plus</summary>
+                <div class="nav-more-panel">
+                  {% if can('insertion:view') %}
+                    <a class="pill {% if ep.startswith('insertion.') %}active{% endif %}" href="{{ url_for('insertion.index') }}">Insertion</a>
+                  {% endif %}
+                  {% if can('quartiers:view') %}
+                    <a class="pill {% if ep.startswith('quartiers.') %}active{% endif %}" href="{{ url_for('quartiers.index') }}">Quartiers</a>
+                  {% endif %}
+                  {% if can('pedagogie:view') %}
+                    <a class="pill {% if ep.startswith('pedagogie.') %}active{% endif %}" href="{{ url_for('pedagogie.apprentissages_home') }}">Apprentissages</a>
+                  {% endif %}
+                  {% if can('inventaire:view') %}
+                    <a class="pill {% if ep.startswith('inventaire_materiel.') %}active{% endif %}" href="{{ url_for('inventaire_materiel.list_items') }}">Inventaire</a>
+                  {% endif %}
+                  {% if can('partenaires:view') %}
+                    <a class="pill {% if ep.startswith('partenaires.') %}active{% endif %}" href="{{ url_for('partenaires.index') }}">Partenaires</a>
+                  {% endif %}
+                  {% if can('questionnaires:view') %}
+                    <a class="pill {% if ep.startswith('questionnaires.') %}active{% endif %}" href="{{ url_for('questionnaires.index') }}">Questionnaires</a>
+                  {% endif %}
+                  {% if can('admin:users') or can('admin:rbac') or can('controle:view') %}
+                    <div class="nav-more-heading">Administration</div>
+                    {% if can('admin:users') %}
+                      <a class="pill {% if ep.startswith('admin.users') %}active{% endif %}" href="{{ url_for('admin.users') }}">Équipe</a>
+                    {% endif %}
+                    {% if can('admin:rbac') %}
+                      <a class="pill {% if ep.startswith('admin.droits') %}active{% endif %}" href="{{ url_for('admin.droits') }}">Droits</a>
+                    {% endif %}
+                    {% if can('controle:view') %}
+                      <a class="pill {% if ep == 'main.controle' %}active{% endif %}" href="{{ url_for('main.controle') }}">Contrôle</a>
+                  <a class="pill {% if ep == 'main.controle_navigation' %}active{% endif %}" href="{{ url_for('main.controle_navigation') }}">Audit navigation</a>
+                    {% endif %}
+                  {% endif %}
+                </div>
+              </details>
             </div>
-          </details>
+
+          {% elif not current_user.has_role("admin_tech") %}
+            <div class="nav-category-row">
+              {% if can('dashboard:view') %}
+                <a class="pill {% if ep.startswith('main.dashboard') %}active{% endif %}" href="{{ url_for('main.dashboard') }}">Accueil</a>
+              {% endif %}
+
+              <details class="nav-more">
+                <summary class="pill {% if is_publics %}active{% endif %}">Publics</summary>
+                <div class="nav-more-panel">
+                  <a class="pill {% if ep == 'main.hub_publics' %}active{% endif %}" href="{{ url_for('main.hub_publics') }}">Accueil publics</a>
+                  {% if can('participants:view') or can('participants:view_all') %}
+                    <a class="pill {% if ep.startswith('participants.') %}active{% endif %}" href="{{ url_for('main.hub_publics') }}">Participants</a>
+                  {% endif %}
+                  {% if can('insertion:view') %}
+                    <a class="pill {% if ep.startswith('insertion.') %}active{% endif %}" href="{{ url_for('insertion.index') }}">Insertion</a>
+                  {% endif %}
+                  {% if can('quartiers:view') %}
+                    <a class="pill {% if ep.startswith('quartiers.') %}active{% endif %}" href="{{ url_for('quartiers.index') }}">Quartiers</a>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="nav-more">
+                <summary class="pill {% if is_presences or is_activites %}active{% endif %}">Activités</summary>
+                <div class="nav-more-panel">
+                  <a class="pill {% if ep == 'main.hub_activites' %}active{% endif %}" href="{{ url_for('main.hub_activites') }}">Accueil activités</a>
+                  {% if can('emargement:view') %}
+                    <a class="pill {% if is_presences %}active{% endif %}" href="{{ url_for('activite.index') }}">Présences / émargement</a>
+                  {% endif %}
+                  {% if can('statsimpact:view') or can('stats:view') %}
+                    <a class="pill {% if ep.startswith('statsimpact.') %}active{% endif %}" href="{{ url_for('statsimpact.dashboard') }}">Données ateliers</a>
+                  {% endif %}
+                  {% if can('pedagogie:view') %}
+                    <a class="pill {% if ep.startswith('pedagogie.') and not ep.startswith('pedagogie.suivi_pedagogique') %}active{% endif %}" href="{{ url_for('pedagogie.apprentissages_home') }}">Apprentissages</a>
+                    <a class="pill {% if ep.startswith('pedagogie.suivi_pedagogique') %}active{% endif %}" href="{{ url_for('pedagogie.suivi_pedagogique') }}">Suivi pédagogique</a>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="nav-more">
+                <summary class="pill {% if is_finance %}active{% endif %}">Finances</summary>
+                <div class="nav-more-panel">
+                  {% if can('projets:view') or can('subventions:view') or can('depenses:view') %}
+                    <a class="pill {% if ep == 'projets.finance_home' %}active{% endif %}" href="{{ url_for('projets.finance_home') }}">Accueil finances</a>
+                  {% endif %}
+                  {% if can('projets:view') %}
+                    <a class="pill {% if ep == 'projets.finance_simple' %}active{% endif %}" href="{{ url_for('projets.finance_simple') }}">Vue simple</a>
+                    <a class="pill {% if ep == 'projets.finance_secteur' %}active{% endif %}" href="{{ url_for('projets.finance_secteur') }}">Pilotage annuel</a>
+                  {% endif %}
+                  {% if can('subventions:view') %}
+                    <a class="pill {% if ep.startswith('previsionnel.') %}active{% endif %}" href="{{ url_for('previsionnel.index') }}">Prévisionnels &amp; demandes</a>
+                    <a class="pill {% if ep.startswith('main.subventions') %}active{% endif %}" href="{{ url_for('main.subventions_list') }}">Enveloppes</a>
+                  {% endif %}
+                  {% if can('depenses:view') %}
+                    <a class="pill {% if ep.startswith('budget.') %}active{% endif %}" href="{{ url_for('budget.depenses_list') }}">Dépenses</a>
+                  {% endif %}
+                  {% if can('projets:view') %}
+                    <a class="pill {% if ep.startswith('projets.projets') or ep.startswith('projets.projet_') %}active{% endif %}" href="{{ url_for('projets.projets_list') }}">Projets financés</a>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="nav-more">
+                <summary class="pill {% if is_bilans %}active{% endif %}">Bilans</summary>
+                <div class="nav-more-panel">
+                  <a class="pill {% if ep == 'main.hub_bilans' %}active{% endif %}" href="{{ url_for('main.hub_bilans') }}">Accueil bilans</a>
+                  {% if can('stats:view') %}
+                    <a class="pill {% if ep.startswith('main.stats_bilans') or ep.startswith('main.bilan_global') or ep.startswith('main.stats') %}active{% endif %}" href="{{ url_for('main.stats_bilans') }}">Stats &amp; bilans</a>
+                  {% endif %}
+                  {% if can('bilans:view') %}
+                    <a class="pill {% if ep.startswith('bilans.') %}active{% endif %}" href="{{ url_for('bilans.bilans_lourds', year=2026) }}">Bilans lourds</a>
+                  {% endif %}
+                  {% if can('questionnaires:view') %}
+                    <a class="pill {% if ep.startswith('questionnaires.') %}active{% endif %}" href="{{ url_for('questionnaires.index') }}">Questionnaires d’impact</a>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="nav-more">
+                <summary class="pill {% if is_ressources %}active{% endif %}">Ressources</summary>
+                <div class="nav-more-panel">
+                  <a class="pill {% if ep == 'main.hub_ressources' %}active{% endif %}" href="{{ url_for('main.hub_ressources') }}">Accueil ressources</a>
+                  {% if can('inventaire:view') %}
+                    <a class="pill {% if ep.startswith('inventaire_materiel.') %}active{% endif %}" href="{{ url_for('inventaire_materiel.list_items') }}">Inventaire matériel</a>
+                  {% endif %}
+                  {% if can('partenaires:view') %}
+                    <a class="pill {% if ep.startswith('partenaires.') %}active{% endif %}" href="{{ url_for('partenaires.index') }}">Annuaire partenaires</a>
+                  {% endif %}
+                </div>
+              </details>
+
+              <details class="nav-more">
+                <summary class="pill {% if is_admin_area %}active{% endif %}">Admin</summary>
+                <div class="nav-more-panel">
+                  {% if can('admin:users') %}
+                    <a class="pill {% if ep.startswith('admin.users') %}active{% endif %}" href="{{ url_for('admin.users') }}">Équipe</a>
+                  {% endif %}
+                  {% if can('admin:rbac') %}
+                    <a class="pill {% if ep.startswith('admin.droits') %}active{% endif %}" href="{{ url_for('admin.droits') }}">Droits</a>
+                    <a class="pill {% if ep.startswith('admin.referentiels') %}active{% endif %}" href="{{ url_for('admin.referentiels') }}">Référentiels</a>
+                    <a class="pill {% if ep.startswith('admin.instance_settings') %}active{% endif %}" href="{{ url_for('admin.instance_settings') }}">Identité app</a>
+                  {% endif %}
+                  {% if can('secteurs:edit') %}
+                    <a class="pill {% if ep.startswith('admin.secteurs') %}active{% endif %}" href="{{ safe_url_for('admin.secteurs') }}">Secteurs</a>
+                  {% endif %}
+                  {% if can('controle:view') %}
+                    <a class="pill {% if ep == 'main.controle' %}active{% endif %}" href="{{ url_for('main.controle') }}">Contrôle</a>
+                  <a class="pill {% if ep == 'main.controle_navigation' %}active{% endif %}" href="{{ url_for('main.controle_navigation') }}">Audit navigation</a>
+                  {% endif %}
+                  {% if can('ateliers:sync') %}
+                    <a class="pill {% if request.endpoint == 'admin.import_excel' %}active{% endif %}" href="{{ url_for('admin.import_excel') }}">Import Excel</a>
+                  {% endif %}
+                </div>
+              </details>
+            </div>
+
+          {% else %}
+            <div class="nav-category-row">
+              <a class="pill {% if ep.startswith('main.dashboard') %}active{% endif %}" href="{{ url_for('main.dashboard') }}">Accueil</a>
+              <details class="nav-more">
+                <summary class="pill {% if is_admin_area %}active{% endif %}">Administration</summary>
+                <div class="nav-more-panel">
+                  <a class="pill {% if ep.startswith('admin.users') %}active{% endif %}" href="{{ url_for('admin.users') }}">Équipe</a>
+                  {% if can('admin:rbac') %}
+                    <a class="pill {% if ep.startswith('admin.droits') %}active{% endif %}" href="{{ url_for('admin.droits') }}">Droits</a>
+                    <a class="pill {% if ep.startswith('admin.referentiels') %}active{% endif %}" href="{{ url_for('admin.referentiels') }}">Référentiels</a>
+                    <a class="pill {% if ep.startswith('admin.instance_settings') %}active{% endif %}" href="{{ url_for('admin.instance_settings') }}">Identité app</a>
+                  {% endif %}
+                  {% if can('secteurs:edit') %}
+                    <a class="pill {% if ep.startswith('admin.secteurs') %}active{% endif %}" href="{{ safe_url_for('admin.secteurs') }}">Secteurs</a>
+                  {% endif %}
+                  {% if can('controle:view') %}
+                    <a class="pill {% if ep == 'main.controle' %}active{% endif %}" href="{{ url_for('main.controle') }}">Contrôle</a>
+                  <a class="pill {% if ep == 'main.controle_navigation' %}active{% endif %}" href="{{ url_for('main.controle_navigation') }}">Audit navigation</a>
+                  {% endif %}
+                  {% if can('ateliers:sync') %}
+                    <a class="pill {% if request.endpoint == 'admin.import_excel' %}active{% endif %}" href="{{ url_for('admin.import_excel') }}">Import Excel</a>
+                  {% endif %}
+                </div>
+              </details>
+              <details class="nav-more">
+                <summary class="pill">Ressources</summary>
+                <div class="nav-more-panel">
+                  {% if can('quartiers:view') %}
+                    <a class="pill {% if ep.startswith('quartiers.') %}active{% endif %}" href="{{ url_for('quartiers.index') }}">Quartiers</a>
+                  {% endif %}
+                  {% if can('questionnaires:view') %}
+                    <a class="pill {% if ep.startswith('questionnaires.') %}active{% endif %}" href="{{ url_for('questionnaires.index') }}">Questionnaires</a>
+                  {% endif %}
+                </div>
+              </details>
+            </div>
+          {% endif %}
 
           <div class="right">
             <div class="global-search">
@@ -563,15 +718,6 @@
               <span class="mode-switch__label">Affichage</span>
               <button class="pill {% if ui_simplified %}active{% endif %}" type="submit" name="mode" value="simple">Simple</button>
               <button class="pill {% if not ui_simplified %}active{% endif %}" type="submit" name="mode" value="expert">Expert</button>
-            </form>
-            <form method="post" action="{{ url_for('main.set_ui_device_mode') }}" class="mode-switch">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="hidden" name="next" value="{{ request.full_path if request.query_string else request.path }}">
-              <span class="mode-switch__label">Écran</span>
-              <button class="pill {% if ui_device_mode == 'desktop' %}active{% endif %}" type="submit" name="device_mode" value="desktop">Ordinateur</button>
-              <button class="pill {% if ui_device_mode == 'mobile' %}active{% endif %}" type="submit" name="device_mode" value="mobile">Mobile</button>
-              <button class="pill {% if ui_device_mode == 'tablet' %}active{% endif %}" type="submit" name="device_mode" value="tablet">Tablette</button>
-              <button class="pill {% if ui_device_mode == 'kiosk' %}active{% endif %}" type="submit" name="device_mode" value="kiosk">Borne</button>
             </form>
             <div class="pill" id="themeToggle" title="Changer de thème">🌙</div>
 
@@ -600,7 +746,7 @@
   </div>
   {% endif %}
 
-  <main id="main-content" class="container" tabindex="-1">
+  <div class="container">
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="stack flash-stack">
@@ -624,19 +770,21 @@
       {% set endpoint_module = (ep.split('.', 1)[0] if '.' in ep else ep) %}
       {% set module_labels = {
         'main': 'Pilotage',
-        'budget': 'Finance',
-        'projets': 'Projets',
-        'participants': 'Participants',
-        'activite': 'Activité',
-        'kiosk': 'Kiosque',
-        'statsimpact': 'Données ateliers',
+        'budget': 'Finances',
+        'projets': 'Projets & finances',
+        'previsionnel': 'Finances',
+        'participants': 'Publics & parcours',
+        'insertion': 'Publics & parcours',
+        'activite': 'Activités & présences',
+        'kiosk': 'Présences',
+        'statsimpact': 'Activités & présences',
         'pedagogie': 'Pédagogie',
-        'bilans': 'Bilans',
-        'inventaire': 'Inventaire factures',
-        'inventaire_materiel': 'Inventaire matériel',
-        'quartiers': 'Quartiers',
-        'partenaires': 'Partenaires',
-        'questionnaires': 'Questionnaires',
+        'bilans': 'Bilans & exports',
+        'inventaire': 'Ressources',
+        'inventaire_materiel': 'Ressources',
+        'quartiers': 'Publics & parcours',
+        'partenaires': 'Ressources',
+        'questionnaires': 'Bilans & exports',
         'admin': 'Administration',
         'auth': 'Connexion',
         'setup': 'Initialisation',
@@ -646,7 +794,9 @@
         'main': 'dashboard:view',
         'budget': 'depenses:view',
         'projets': 'projets:view',
+        'previsionnel': 'subventions:view',
         'participants': 'participants:view',
+        'insertion': 'insertion:view',
         'activite': 'emargement:view',
         'kiosk': 'emargement:view',
         'statsimpact': 'statsimpact:view',
@@ -692,7 +842,7 @@
     {% endif %}
 
     {% block body %}{% endblock %}
-  </main>
+  </div>
 
   <script>
   (function(){
@@ -1115,5 +1265,39 @@
   <script src="{{ url_for('static', filename='js/feedback-kit.js') }}"></script>
 
   {% block scripts_extra %}{% endblock %}
+
+<script>
+(function(){
+  function closeNavDetails(except){
+    document.querySelectorAll('.nav-more[open]').forEach(function(details){
+      if(details !== except){ details.removeAttribute('open'); }
+    });
+  }
+
+  document.addEventListener('toggle', function(event){
+    const details = event.target;
+    if(!(details instanceof HTMLDetailsElement)){ return; }
+    if(!details.classList.contains('nav-more')){ return; }
+    if(details.open){ closeNavDetails(details); }
+  }, true);
+
+  document.addEventListener('click', function(event){
+    const target = event.target;
+    if(!target.closest || !target.closest('.nav-more')){
+      closeNavDetails(null);
+      return;
+    }
+
+    if(target.closest('.nav-more-panel a')){
+      closeNavDetails(null);
+    }
+  });
+
+  document.addEventListener('keydown', function(event){
+    if(event.key === 'Escape'){ closeNavDetails(null); }
+  });
+})();
+</script>
+
 </body>
 </html>

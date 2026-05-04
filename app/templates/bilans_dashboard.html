@@ -40,7 +40,7 @@
             <div class="nav-more-panel" style="left:auto; right:0; min-width:240px;">
               <a class="pill" href="{{ url_for('bilans.qualite', year=year) }}">Qualité et suivi</a>
               <a class="pill" href="{{ url_for('bilans.inventaire', year=year) }}">Bilan inventaire</a>
-              {% if has_perm("bilans:view") %}
+              {% if can("bilans:view") %}
               <a class="pill" href="{{ url_for('bilans.bilans_lourds', year=year) }}">Rapport détaillé</a>
               {% endif %}
             </div>

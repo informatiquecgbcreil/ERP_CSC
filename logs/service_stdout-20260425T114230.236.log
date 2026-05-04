@@ -1,0 +1,2 @@
+DB URI = postgresql+psycopg://postgres:***@127.0.0.1:5432/erp_pedagogie
+DB DIALECT = postgresql

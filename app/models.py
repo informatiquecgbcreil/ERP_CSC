@@ -664,6 +664,7 @@ class Subvention(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     lignes = db.relationship("LigneBudget", backref="source_sub", cascade="all, delete-orphan")
+    depense_affectations = db.relationship("DepenseAffectation", back_populates="subvention", cascade="all, delete-orphan")
     projets = db.relationship("SubventionProjet", back_populates="subvention", cascade="all, delete-orphan")
 
     @property
@@ -702,6 +703,17 @@ class Subvention(db.Model):
     def total_reste(self):
         return round(sum(float(l.reste or 0) for l in self.lignes if getattr(l, "nature", "charge") == "charge"), 2)
 
+    @property
+    def total_impute_affectations(self):
+        return round(sum(float(a.montant or 0) for a in self.depense_affectations if a.depense and not a.depense.est_supprimee), 2)
+
+    @property
+    def reste_imputable(self):
+        base = float(self.montant_attribue or self.montant_recu or 0)
+        if base <= 0:
+            base = float(self.montant_demande or 0)
+        return round(base - float(self.total_impute_affectations or 0), 2)
+
 
 class LigneBudget(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -719,14 +731,28 @@ class LigneBudget(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     depenses = db.relationship("Depense", backref="budget_source", cascade="all, delete-orphan")
+    depense_affectations = db.relationship("DepenseAffectation", back_populates="ligne_budget", cascade="all, delete-orphan")
 
     @property
     def engage(self):
         # engage / reste n'ont de sens que pour les CHARGES
         if getattr(self, "nature", "charge") != "charge":
             return 0.0
-        # BLINDAGE: on ne compte pas les dépenses soft-delete
-        return round(sum(float(d.montant or 0) for d in self.depenses if not d.est_supprimee), 2)
+
+        # Nouveau modèle : on additionne les imputations rattachées à cette ligne.
+        affecte = sum(
+            float(a.montant or 0)
+            for a in self.depense_affectations
+            if a.depense and not a.depense.est_supprimee
+        )
+
+        # Compatibilité : les anciennes dépenses sans affectation explicite comptent encore à 100%.
+        legacy = sum(
+            float(d.montant or 0)
+            for d in self.depenses
+            if not d.est_supprimee and not getattr(d, "affectations", [])
+        )
+        return round(float(affecte or 0) + float(legacy or 0), 2)
 
     @property
     def reste(self):
@@ -763,9 +789,62 @@ class Depense(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     documents = db.relationship("DepenseDocument", backref="depense", cascade="all, delete-orphan")
+    affectations = db.relationship("DepenseAffectation", back_populates="depense", cascade="all, delete-orphan")
     inventaire_items = db.relationship("InventaireItem", backref="depense", passive_deletes=True)
     # relation SQLAlchemy (nécessaire pour back_populates depuis ChargeProjet)
     charge_projet = db.relationship("ChargeProjet", back_populates="depenses")
+
+    @property
+    def total_affecte(self):
+        return round(sum(float(a.montant or 0) for a in self.affectations), 2)
+
+    @property
+    def reste_a_affecter(self):
+        return round(float(self.montant or 0) - float(self.total_affecte or 0), 2)
+
+    @property
+    def statut_affectation(self):
+        reste = float(self.reste_a_affecter or 0)
+        if abs(reste) <= 0.01:
+            return "ok"
+        if reste > 0:
+            return "partiel"
+        return "depassement"
+
+
+class DepenseAffectation(db.Model):
+    __tablename__ = "depense_affectation"
+
+    id = db.Column(db.Integer, primary_key=True)
+    depense_id = db.Column(db.Integer, db.ForeignKey("depense.id", ondelete="CASCADE"), nullable=False, index=True)
+
+    # source_type = subvention / fonds_propres / autre
+    source_type = db.Column(db.String(30), nullable=False, default="subvention")
+    subvention_id = db.Column(db.Integer, db.ForeignKey("subvention.id", ondelete="SET NULL"), nullable=True, index=True)
+    ligne_budget_id = db.Column(db.Integer, db.ForeignKey("ligne_budget.id", ondelete="SET NULL"), nullable=True, index=True)
+
+    libelle_source = db.Column(db.String(200), nullable=True)
+    montant = db.Column(db.Float, nullable=False, default=0.0)
+    commentaire = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    depense = db.relationship("Depense", back_populates="affectations")
+    subvention = db.relationship("Subvention", back_populates="depense_affectations")
+    ligne_budget = db.relationship("LigneBudget", back_populates="depense_affectations")
+
+    @property
+    def source_label(self):
+        if self.source_type == "fonds_propres":
+            return self.libelle_source or "Fonds propres"
+        if self.subvention:
+            return self.subvention.nom
+        return self.libelle_source or "Source non renseignée"
+
+    @property
+    def ligne_label(self):
+        if self.ligne_budget:
+            return f"{self.ligne_budget.compte} — {self.ligne_budget.libelle}"
+        return "—"
 
 
 class DepenseDocument(db.Model):
@@ -1336,6 +1415,16 @@ class SessionActivite(db.Model):
     duree_minutes = db.Column(db.Integer, nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # P0.4J — Suivi des apprentissages : intention et bilan de séance
+    intention_seance = db.Column(db.String(255), nullable=True)
+    intention_seance_detail = db.Column(db.Text, nullable=True)
+    bilan_qualitatif = db.Column(db.Text, nullable=True)
+    pertinence = db.Column(db.String(30), nullable=True)  # oui | partiel | non
+    difficulte = db.Column(db.String(30), nullable=True)  # trop_facile | adaptee | trop_difficile
+    participation_groupe = db.Column(db.String(30), nullable=True)  # faible | correcte | bonne | tres_bonne
+    a_reprendre = db.Column(db.Boolean, nullable=True)
+    commentaire_pedagogique = db.Column(db.Text, nullable=True)
     consommation_config_id = db.Column(
         db.Integer,
         db.ForeignKey("materiel_consommation_config.id"),
