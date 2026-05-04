@@ -19,3 +19,8 @@ logs/*.log
 *.html1
 *.html2
 *.docx1
+PATCH_NOTES_*.md
+AUDIT_*.md
+README_*.txt
+README_PATCH*.md
+README_hotfix_*.txt
